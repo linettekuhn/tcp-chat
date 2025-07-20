@@ -3,6 +3,7 @@ const router = express.Router();
 const { spawn } = require("child_process");
 const path = require("path");
 const serverPath = path.join(__dirname, "../TCPChatServer.exe");
+const os = require("os");
 
 let cmdChar = null;
 
@@ -76,6 +77,27 @@ router.post("/stop", (req, res) => {
     cmdChar = null;
     return res.status(200).send(`Server was shutdown`);
   });
+});
+
+router.get("/host-ip", (req, res) => {
+  const interfaces = os.networkInterfaces();
+  let address = "127.0.0.1";
+
+  // loop thru network interfaces
+  for (const name in interfaces) {
+    for (const interface of interfaces[name]) {
+      // find first non-internal ipv4 ip address
+      if (
+        interface.family === "IPv4" &&
+        interface.address !== "127.0.0.1" &&
+        !interface.internal
+      ) {
+        address = interface.address;
+        break;
+      }
+    }
+  }
+  return res.status(200).send(address);
 });
 
 module.exports = router;
