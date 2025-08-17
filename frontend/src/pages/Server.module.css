@@ -1,0 +1,68 @@
+.server {
+  flex-direction: row;
+  justify-content: space-evenly;
+}
+
+.serverOptions {
+  display: flex;
+  flex-direction: column;
+  align-items: space-between;
+  gap: 1rem;
+}
+
+.serverOptions label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.serverOptions input {
+  padding: 0.5rem;
+  background-color: rgb(217, 217, 217);
+  border-radius: 1rem;
+  border: 2px solid rgb(18, 115, 105);
+}
+
+.buttons {
+  display: flex;
+  justify-content: space-around;
+  margin: 1rem 0;
+  gap: 1rem;
+}
+
+.users {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.serverLog {
+  background-color: rgb(16, 64, 59);
+  color: white;
+  border-radius: 2rem;
+  height: 50vh;
+}
+
+.serverStatus {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 2rem;
+}
+
+.activeUsers {
+  background-color: rgb(191, 191, 191);
+  color: black;
+  border: 3px solid rgb(18, 115, 105);
+  border-radius: 1rem;
+  width: 100%;
+  height: 90%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  padding: 0 1rem;
+}
+.activeUsers li {
+  list-style: none;
+}

@@ -10,7 +10,10 @@ h4 {
 
 p,
 button,
-a {
+a,
+input,
+li,
+select {
   font-family: "Chivo";
 }
 
@@ -41,6 +44,7 @@ blockquote,
 dl,
 dd {
   margin-block-end: 0;
+  margin: 0;
 }
 
 /* Center headers */
@@ -110,6 +114,14 @@ button:hover {
   cursor: pointer;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  background-color: rgb(108, 108, 108);
+  border: 2px solid rgb(88, 88, 88);
+  color: rgb(53, 53, 53);
+  opacity: 0.7;
+}
+
 /* Remove list styles on ul, ol elements with a list role, which suggests default styling will be removed */
 ul[role="list"],
 ol[role="list"] {
@@ -146,15 +158,6 @@ img,
 picture {
   max-width: 100%;
   display: block;
-}
-
-/* Inherit fonts for inputs and buttons */
-input,
-button,
-textarea,
-select {
-  font-family: inherit;
-  font-size: inherit;
 }
 
 /* Make sure textareas without a rows attribute are not tiny */
