@@ -23,7 +23,7 @@ function Server() {
     await stopServer(port, serverAddress);
   };
   return (
-    <>
+    <div className="content">
       <form action="server">
         <p>Port:</p>
         <input
@@ -58,7 +58,7 @@ function Server() {
       <button type="button" onClick={handleServerStop}>
         Shutdown Server
       </button>
-    </>
+    </div>
   );
 }
 export default Server;

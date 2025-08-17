@@ -7,16 +7,19 @@ function Client() {
   const [serverAddress, setServerAddress] = useState("");
   const [command, setCommand] = useState("");
   const [messages, setMessages] = useState<string[]>([]);
+  const [connected, setConnected] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
 
   const handleClientStart = async () => {
     await startClient(port, serverAddress);
+    setConnected(true);
     recieveMessages();
   };
 
   const handleClientStop = async () => {
     closeMessageStream();
     await stopClient();
+    setConnected(false);
     setMessages([]);
   };
 
@@ -52,50 +55,52 @@ function Client() {
   };
 
   return (
-    <>
-      <form action="client">
-        <p>Port:</p>
-        <input
-          type="number"
-          placeholder="31337"
-          value={port}
-          onChange={(e) => {
-            setPort(Number(e.target.value));
-          }}
-        />
-        <p>Server IP Address:</p>
-        <input
-          type="text"
-          placeholder="127.0.0.1"
-          value={serverAddress}
-          onChange={(e) => {
-            setServerAddress(e.target.value);
-          }}
-        />
-        <button type="button" onClick={handleClientStart}>
-          Start Client
-        </button>
-      </form>
+    <div className="content">
+      {!connected ? (
+        <form action="client">
+          <p>Port:</p>
+          <input
+            type="number"
+            placeholder="31337"
+            value={port}
+            onChange={(e) => {
+              setPort(Number(e.target.value));
+            }}
+          />
+          <p>Server IP Address:</p>
+          <input
+            type="text"
+            placeholder="127.0.0.1"
+            value={serverAddress}
+            onChange={(e) => {
+              setServerAddress(e.target.value);
+            }}
+          />
+          <button type="button" onClick={handleClientStart}>
+            Start Client
+          </button>
+        </form>
+      ) : null}
       <button type="button" onClick={handleClientStop}>
         Stop Client
       </button>
-
-      <input
-        type="text"
-        placeholder="Type in a command..."
-        value={command}
-        onChange={(e) => setCommand(e.target.value)}
-      />
-      <button type="button" onClick={handleSendCommand}>
-        Send
-      </button>
-
       <div className="chatbox">
         {messages.map((message: string, index: number) => (
           <Message key={index} msg={message} />
         ))}
       </div>
-    </>
+      <div className="commandInput">
+        <input
+          type="text"
+          placeholder="Type in a command..."
+          value={command}
+          onChange={(e) => setCommand(e.target.value)}
+        />
+        <button type="button" onClick={handleSendCommand}>
+          Send
+        </button>
+      </div>
+    </div>
   );
 }
 export default Client;

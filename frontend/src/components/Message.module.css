@@ -1,0 +1,30 @@
+.message,
+.serverMessage {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  border: 1px solid white;
+  margin: 1rem;
+  padding: 0 1rem;
+  border-radius: 1rem;
+  position: relative;
+}
+
+.serverMessage {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.displayName {
+  position: absolute;
+  top: -50%;
+  left: 0;
+  background-color: aquamarine;
+  padding: 0 0.5rem;
+  color: black;
+  border-radius: 0.5rem;
+}
+
+.messageText {
+  white-space: break-spaces;
+  text-align: start;
+}
