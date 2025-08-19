@@ -11,6 +11,8 @@ app.listen(3000, () => {
 
 const serverRouter = require("./routes/server");
 app.use("/server", serverRouter);
+console.log("server router initialized");
 
 const clientRouter = require("./routes/client");
 app.use("/client", clientRouter);
+console.log("client router initialized");

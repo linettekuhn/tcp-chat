@@ -54,3 +54,42 @@ export async function getHostIP() {
   const ip = response.text();
   return ip;
 }
+
+export async function startAdminClient(port: number, serverAddress: string) {
+  const response = await handleResponse(
+    await fetch("http://localhost:3000/server/start-admin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ port, serverAddress }),
+    })
+  );
+  const msg = await response.text();
+  return msg;
+}
+
+export async function sendAdminCommand(command: string) {
+  const response = await handleResponse(
+    await fetch("http://localhost:3000/server/command-admin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ command }),
+    })
+  );
+  const msg = await response.text();
+  return msg;
+}
+
+export async function stopAdminClient() {
+  await handleResponse(
+    await fetch("http://localhost:3000/server/stop-admin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+  );
+}
