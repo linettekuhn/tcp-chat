@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { startServer, stopServer, getHostIP } from "../../api/tcpServer";
 import styles from "./Server.module.css";
-import { IoReload } from "react-icons/io5";
 import {
   sendAdminCommand,
   startAdminClient,
@@ -15,7 +14,6 @@ function Server() {
   const [serverAddress, setServerAddress] = useState("");
   const [isActive, setActive] = useState(false);
   const [activeUsers, setActiveUsers] = useState<string[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
@@ -26,22 +24,6 @@ function Server() {
 
     fetchIP();
   }, []);
-
-  const fetchActiveUsers = async () => {
-    if (loadingUsers) return;
-    setLoadingUsers(true);
-
-    // recieve message until promise is resolved
-    const promise = recieveMessages();
-
-    // send commands to get list
-    await sendAdminCommand(`${commandChar}register admin 123`);
-    await sendAdminCommand(`${commandChar}login admin 123`);
-    await sendAdminCommand(`${commandChar}getlist`);
-
-    // wait for promise to be resolved and stop temp client
-    await promise;
-  };
 
   const recieveMessages = (): Promise<void> => {
     return new Promise((resolve) => {
@@ -78,6 +60,32 @@ function Server() {
       };
     });
   };
+
+  useEffect(() => {
+    const fetchActiveUsers = async () => {
+      // recieve message until promise is resolved
+      const promise = recieveMessages();
+
+      // send commands to get list
+      await sendAdminCommand(`${commandChar}register admin 123`);
+      await sendAdminCommand(`${commandChar}login admin 123`);
+      await sendAdminCommand(`${commandChar}getlist`);
+
+      // wait for promise to be resolved and stop temp client
+      await promise;
+    };
+
+    if (isActive) {
+      fetchActiveUsers();
+
+      // call fetch active users function every 5 seconds
+      const interval = setInterval(() => {
+        fetchActiveUsers();
+      }, 5000);
+
+      return () => clearInterval(interval);
+    }
+  }, [isActive, commandChar]);
 
   const startAdmin = async () => {
     await startAdminClient(port, serverAddress);
@@ -168,10 +176,6 @@ function Server() {
                 Inactive
               </p>
             )}
-            <IoReload
-              onClick={fetchActiveUsers}
-              style={{ cursor: "pointer" }}
-            />
           </div>
           <ul className={styles.activeUsers}>
             {activeUsers.length > 0 ? (
