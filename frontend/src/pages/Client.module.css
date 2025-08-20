@@ -1,0 +1,72 @@
+.client {
+  flex-direction: column;
+}
+
+.clientOptions {
+  display: flex;
+  flex-direction: column;
+  align-items: space-between;
+  gap: 1rem;
+}
+
+.clientOptions label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.clientOptions input,
+.chatbox input {
+  padding: 0.5rem;
+  background-color: rgb(217, 217, 217);
+  border-radius: 1rem;
+  border: 2px solid rgb(18, 115, 105);
+}
+
+.connectedClientView {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-around;
+  height: 100%;
+}
+
+.chatbox {
+  border-radius: 1rem;
+  border: 2px solid rgb(18, 115, 105);
+  padding: 1rem;
+  height: 80%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.messages {
+  overflow-y: scroll;
+  height: 90%;
+}
+
+.sendBtn {
+  background: none;
+  border: none;
+  color: rgb(18, 115, 105);
+  font-size: 1.5rem;
+  padding: 0;
+}
+
+.sendBtn:hover {
+  background: none;
+  color: rgb(14, 90, 82);
+  font-size: 1.6rem;
+}
+
+.commandInput {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.commandInput input {
+  width: 90%;
+}

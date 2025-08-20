@@ -67,8 +67,6 @@ function Server() {
       const promise = recieveMessages();
 
       // send commands to get list
-      await sendAdminCommand(`${commandChar}register admin 123`);
-      await sendAdminCommand(`${commandChar}login admin 123`);
       await sendAdminCommand(`${commandChar}getlist`);
 
       // wait for promise to be resolved and stop temp client
@@ -89,6 +87,8 @@ function Server() {
 
   const startAdmin = async () => {
     await startAdminClient(port, serverAddress);
+    await sendAdminCommand(`${commandChar}register admin 123`);
+    await sendAdminCommand(`${commandChar}login admin 123`);
   };
 
   const closeAdmin = async () => {
