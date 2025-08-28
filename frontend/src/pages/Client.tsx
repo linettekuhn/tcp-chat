@@ -35,7 +35,9 @@ function Client() {
       return;
     }
 
-    const eventSource = new EventSource("http://localhost:3000/client/output");
+    const eventSource = new EventSource(
+      "https://tcp-chat-backend.onrender.com/client/output"
+    );
     eventSourceRef.current = eventSource;
 
     eventSource.onmessage = (event) => {

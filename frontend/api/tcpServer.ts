@@ -20,7 +20,7 @@ export async function startServer(
   commandChar: string
 ) {
   await handleResponse(
-    await fetch("http://localhost:3000/server/start", {
+    await fetch("https://tcp-chat-backend.onrender.com/server/start", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -32,7 +32,7 @@ export async function startServer(
 
 export async function stopServer(port: number, serverAddress: string) {
   await handleResponse(
-    await fetch("http://localhost:3000/server/stop", {
+    await fetch("https://tcp-chat-backend.onrender.com/server/stop", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -44,7 +44,7 @@ export async function stopServer(port: number, serverAddress: string) {
 
 export async function getHostIP() {
   const response = await handleResponse(
-    await fetch("http://localhost:3000/server/host-ip", {
+    await fetch("https://tcp-chat-backend.onrender.com/server/host-ip", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -57,7 +57,7 @@ export async function getHostIP() {
 
 export async function startAdminClient(port: number, serverAddress: string) {
   const response = await handleResponse(
-    await fetch("http://localhost:3000/server/start-admin", {
+    await fetch("https://tcp-chat-backend.onrender.com/server/start-admin", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -71,7 +71,7 @@ export async function startAdminClient(port: number, serverAddress: string) {
 
 export async function sendAdminCommand(command: string) {
   const response = await handleResponse(
-    await fetch("http://localhost:3000/server/command-admin", {
+    await fetch("https://tcp-chat-backend.onrender.com/server/command-admin", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -85,7 +85,7 @@ export async function sendAdminCommand(command: string) {
 
 export async function stopAdminClient() {
   await handleResponse(
-    await fetch("http://localhost:3000/server/stop-admin", {
+    await fetch("https://tcp-chat-backend.onrender.com/server/stop-admin", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -139,4 +139,3 @@ dist
 package-lock.json
 backend/*.exe
 backend/*.txt
-backend/TCPChatServer

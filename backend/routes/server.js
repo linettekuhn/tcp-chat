@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { spawn } = require("child_process");
 const path = require("path");
-const serverPath = path.join(__dirname, "../TCPChatServer");
+const serverPath = path.join(__dirname, "bin", "TCPChatServer");
 const os = require("os");
 
 let cmdChar = null;

@@ -33,7 +33,7 @@ function Server() {
       }
 
       const eventSource = new EventSource(
-        "http://localhost:3000/server/output-admin"
+        "https://tcp-chat-backend.onrender.com/server/output-admin"
       );
       eventSourceRef.current = eventSource;
 
