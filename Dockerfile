@@ -12,11 +12,8 @@ WORKDIR /usr/src/app
 # Copy project files
 COPY . .
 
-# Build C++ server
-RUN mkdir -p build && cd build && cmake .. && make && chmod +x TCPChatServer
-
-# Mark as executable
-RUN chmod +x backend/bin/TCPChatServer
+# Build C++ server directly in backend/bin
+RUN mkdir -p backend/bin && cd backend/bin && cmake ../../ && make && chmod +x TCPChatServer
 
 # Install Node.js dependencies
 RUN cd backend && npm install
