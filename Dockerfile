@@ -15,6 +15,9 @@ COPY . .
 # Build C++ server
 RUN mkdir -p build && cd build && cmake .. && make && chmod +x TCPChatServer
 
+# Mark as executable
+RUN chmod +x backend/bin/TCPChatServer
+
 # Install Node.js dependencies
 RUN cd backend && npm install
 
