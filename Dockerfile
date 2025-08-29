@@ -1,24 +1,40 @@
-# Base image
-FROM ubuntu:22.04
+# 1) Build image for the C++ server using CMake
+FROM ubuntu:22.04 as builder
 
-# Install dependencies
+# Install build dependencies
 RUN apt-get update && apt-get install -y \
-    nodejs npm g++ cmake make \
+    g++ cmake make \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /usr/src/app
 
-# Copy project files
-COPY . .
+# Copy the C++ source files
+COPY cpp-src ./cpp-src
 
-# Build C++ server directly in backend/bin
-RUN mkdir -p backend/bin && cd backend/bin && cmake ../../ && make && chmod +x TCPChatServer
+# Configure and build the C++ project
+RUN cmake -S ./cpp-src -B ./build -DCMAKE_BUILD_TYPE=Release
+RUN cmake --build ./build --target TCPChatServer
+
+# 2) Runtime image for backend
+FROM ubuntu:22.04
+
+# Install runtime dependencies for Node.js
+RUN apt-get update && apt-get install -y \
+    nodejs npm \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /usr/src/app
+
+# Copy the Node.js backend files and the compiled C++ binary from the builder stage
+COPY backend ./backend
+COPY --from=builder /usr/src/app/build/TCPChatServer backend/bin/TCPChatServer
 
 # Install Node.js dependencies
 RUN cd backend && npm install
 
-# Expose port your Node server uses
+# Expose port
 EXPOSE 3000
 
 # Start Node.js server
