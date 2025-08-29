@@ -41,6 +41,47 @@ router.get("/debug-binary", (req, res) => {
   }
 });
 
+router.get("/debug-simple", (req, res) => {
+  const fs = require("fs");
+  const path = require("path");
+
+  const debugInfo = {
+    cwd: process.cwd(),
+    __dirname: __dirname,
+
+    // Check current directory contents recursively
+    allFiles: [],
+  };
+
+  function findFiles(dir, prefix = "") {
+    try {
+      const items = fs.readdirSync(dir);
+      items.forEach((item) => {
+        const fullPath = path.join(dir, item);
+        const relativePath = prefix + item;
+
+        try {
+          const stat = fs.statSync(fullPath);
+          if (stat.isDirectory() && !item.includes("node_modules")) {
+            debugInfo.allFiles.push(`${relativePath}/`);
+            findFiles(fullPath, relativePath + "/");
+          } else if (stat.isFile()) {
+            debugInfo.allFiles.push(relativePath);
+          }
+        } catch (e) {
+          // Skip files we can't read
+        }
+      });
+    } catch (e) {
+      // Skip directories we can't read
+    }
+  }
+
+  findFiles(process.cwd());
+
+  res.json(debugInfo);
+});
+
 router.get("/debug-files", (req, res) => {
   const fs = require("fs");
   const path = require("path");
