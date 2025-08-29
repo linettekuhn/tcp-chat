@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
-WORKDIR /usr/src/app
+WORKDIR /opt/render/project/src
 
 # Copy the C++ source files
 COPY cpp-src ./cpp-src
@@ -25,11 +25,12 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
-WORKDIR /usr/src/app
+WORKDIR /opt/render/project/src
 
 # Copy the Node.js backend files and the compiled C++ binary from the builder stage
 COPY backend ./backend
 COPY --from=builder /usr/src/app/build/TCPChatServer backend/bin/TCPChatServer
+RUN chmod +x ./backend/bin/TCPChatServer
 
 # Install Node.js dependencies
 RUN cd backend && npm install
