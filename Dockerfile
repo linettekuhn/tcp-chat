@@ -16,9 +16,6 @@ COPY cpp-src ./cpp-src
 RUN cmake -S ./cpp-src -B ./build -DCMAKE_BUILD_TYPE=Release
 RUN cmake --build ./build --target TCPChatServer
 
-# DEBUG: Check if binary was actually created
-RUN echo "=== BUILD STAGE DEBUG ===" && ls -la /usr/src/app/build/
-
 # 2) Runtime image for backend
 FROM ubuntu:22.04
 
@@ -36,13 +33,6 @@ WORKDIR /opt/render/project/src/backend
 COPY backend .
 COPY --from=builder /usr/src/app/build/TCPChatServer ./bin/TCPChatServer
 RUN chmod +x ./bin/TCPChatServer
-
-# DEBUG: Check what actually got copied
-RUN echo "=== RUNTIME STAGE DEBUG ===" && \
-    echo "Contents of working directory:" && ls -la && \
-    echo "Contents of bin directory:" && ls -la bin/ || echo "bin directory doesn't exist" && \
-    echo "Looking for binary:" && find . -name "*TCPChatServer*" -type f || echo "No TCPChatServer found"
-
 
 # Install Node.js dependencies
 RUN npm install
