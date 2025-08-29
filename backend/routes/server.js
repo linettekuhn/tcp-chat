@@ -8,6 +8,39 @@ const os = require("os");
 let cmdChar = null;
 let admin = null;
 
+router.get("/debug-binary", (req, res) => {
+  const fs = require("fs");
+  const path = require("path");
+  const { execSync } = require("child_process");
+
+  const serverPath = path.join(__dirname, "../bin/TCPChatServer");
+
+  try {
+    const stats = fs.statSync(serverPath);
+    const fileInfo = {
+      exists: fs.existsSync(serverPath),
+      isFile: stats.isFile(),
+      permissions: stats.mode.toString(8),
+      size: stats.size,
+    };
+
+    // Try to run the binary with --help or similar to see if it works
+    try {
+      const output = execSync(
+        `${serverPath} --help 2>&1 || echo "No help available"`,
+        { encoding: "utf8" }
+      );
+      fileInfo.testOutput = output;
+    } catch (err) {
+      fileInfo.testError = err.message;
+    }
+
+    res.json(fileInfo);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get("/debug-files", (req, res) => {
   const fs = require("fs");
   const path = require("path");
