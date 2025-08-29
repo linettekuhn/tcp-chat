@@ -1,0 +1,16 @@
+#pragma once
+
+enum ErrorCodes {
+	SUCCESS,
+	SHUTDOWN = -1,
+	DISCONNECT = -2,
+	BIND_ERROR = -3,
+	CONNECT_ERROR = -4,
+	SELECT_ERROR = -5,
+	SETUP_ERROR = -6,
+	STARTUP_ERROR = -7,
+	ADDRESS_ERROR = -8,
+	PARAMETER_ERROR = -9,
+	MESSAGE_ERROR = -10,
+};
+
