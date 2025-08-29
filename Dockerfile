@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
-WORKDIR /opt/render/project/src
+WORKDIR /usr/src/app
 
 # Copy the C++ source files
 COPY cpp-src ./cpp-src
@@ -15,6 +15,8 @@ COPY cpp-src ./cpp-src
 # Configure and build the C++ project
 RUN cmake -S ./cpp-src -B ./build -DCMAKE_BUILD_TYPE=Release
 RUN cmake --build ./build --target TCPChatServer
+# After the build step, add this line to verify the binary exists:
+RUN ls -la /usr/src/app/build/
 
 # 2) Runtime image for backend
 FROM ubuntu:22.04

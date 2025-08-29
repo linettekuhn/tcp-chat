@@ -8,6 +8,32 @@ const os = require("os");
 let cmdChar = null;
 let admin = null;
 
+router.get("/debug-files", (req, res) => {
+  const fs = require("fs");
+  const path = require("path");
+
+  const debugInfo = {
+    cwd: process.cwd(),
+    __dirname: __dirname,
+    expectedPath: path.join(__dirname, "../bin/TCPChatServer"),
+
+    // Check what's in the backend directory
+    backendDir: fs.existsSync("./backend")
+      ? fs.readdirSync("./backend")
+      : "backend dir not found",
+
+    // Check what's in the bin directory
+    binDir: fs.existsSync("./backend/bin")
+      ? fs.readdirSync("./backend/bin")
+      : "bin dir not found",
+
+    // Check root directory contents
+    rootDir: fs.readdirSync("./"),
+  };
+
+  res.json(debugInfo);
+});
+
 router.post("/start", (req, res) => {
   const { port, capacity, commandChar } = req.body;
   cmdChar = commandChar;
