@@ -66,7 +66,7 @@ function Client() {
   }, [messages]);
 
   return (
-    <div className={`${styles.client} content`}>
+    <main className={styles.client}>
       {!connected ? (
         <form className={styles.clientOptions} action="client">
           <h1>Connect to a Server</h1>
@@ -133,7 +133,7 @@ function Client() {
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }
 export default Client;

@@ -112,7 +112,7 @@ function Server() {
   };
 
   return (
-    <div className={`${styles.server} content`}>
+    <main className={styles.server}>
       <form className={styles.serverOptions} action="server">
         <h1>Server Options</h1>
         <label htmlFor="port">
@@ -186,7 +186,7 @@ function Server() {
           </ul>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 export default Server;

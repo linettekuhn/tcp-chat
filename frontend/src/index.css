@@ -65,15 +65,17 @@ body {
   background-color: rgb(76, 89, 88);
 }
 
-.content {
+main {
   height: 90vh;
   background-color: rgb(191, 191, 191);
-  border-radius: 2rem 2rem 0 0;
+  border-radius: var(--space-2xl) var(--space-2xl) 0 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 2rem;
+  gap: var(--space-l);
+  padding: var(--space-l);
+  padding-bottom: var(--space-xl);
 }
 
 #root {
@@ -99,10 +101,10 @@ body {
 
 /* Standard button design */
 button {
-  padding: 1rem;
+  padding: var(--space-s);
   background-color: rgb(138, 166, 163);
   border: 2px solid rgb(63, 127, 120);
-  border-radius: 1rem;
+  border-radius: var(--space-s);
 }
 
 button a {
@@ -145,6 +147,7 @@ h2,
 h3,
 h4 {
   text-wrap: balance;
+  align-self: center;
 }
 
 /* A elements that don't have a class get default styles */
@@ -168,4 +171,103 @@ textarea:not([rows]) {
 /* Anything that has been anchored to should have extra scroll margin */
 :target {
   scroll-margin-block: 5ex;
+}
+
+/* Fluid spacing scale generated with Utopia */
+/* @link https://utopia.fyi/space/calculator?c=320,16,1.2,2560,20,1.25,5,2,&s=0.75|0.5|0.25|0.2,1.5|2|3|4|5|6,s-l&g=s,l,xl,12 */
+
+:root {
+  /* Space 4xs: 3px → 4px */
+  --space-4xs: clamp(0.1875rem, 0.1786rem + 0.0446vw, 0.25rem);
+  /* Space 3xs: 4px → 5px */
+  --space-3xs: clamp(0.25rem, 0.2411rem + 0.0446vw, 0.3125rem);
+  /* Space 2xs: 8px → 10px */
+  --space-2xs: clamp(0.5rem, 0.4821rem + 0.0893vw, 0.625rem);
+  /* Space xs: 12px → 15px */
+  --space-xs: clamp(0.75rem, 0.7232rem + 0.1339vw, 0.9375rem);
+  /* Space s: 16px → 20px */
+  --space-s: clamp(1rem, 0.9643rem + 0.1786vw, 1.25rem);
+  /* Space m: 24px → 30px */
+  --space-m: clamp(1.5rem, 1.4464rem + 0.2679vw, 1.875rem);
+  /* Space l: 32px → 40px */
+  --space-l: clamp(2rem, 1.9286rem + 0.3571vw, 2.5rem);
+  /* Space xl: 48px → 60px */
+  --space-xl: clamp(3rem, 2.8929rem + 0.5357vw, 3.75rem);
+  /* Space 2xl: 64px → 80px */
+  --space-2xl: clamp(4rem, 3.8571rem + 0.7143vw, 5rem);
+  /* Space 3xl: 80px → 100px */
+  --space-3xl: clamp(5rem, 4.8214rem + 0.8929vw, 6.25rem);
+  /* Space 4xl: 96px → 120px */
+  --space-4xl: clamp(6rem, 5.7857rem + 1.0714vw, 7.5rem);
+
+  /* One-up pairs */
+  /* Space 4xs-3xs: 3px → 5px */
+  --space-4xs-3xs: clamp(0.1875rem, 0.1696rem + 0.0893vw, 0.3125rem);
+  /* Space 3xs-2xs: 4px → 10px */
+  --space-3xs-2xs: clamp(0.25rem, 0.1964rem + 0.2679vw, 0.625rem);
+  /* Space 2xs-xs: 8px → 15px */
+  --space-2xs-xs: clamp(0.5rem, 0.4375rem + 0.3125vw, 0.9375rem);
+  /* Space xs-s: 12px → 20px */
+  --space-xs-s: clamp(0.75rem, 0.6786rem + 0.3571vw, 1.25rem);
+  /* Space s-m: 16px → 30px */
+  --space-s-m: clamp(1rem, 0.875rem + 0.625vw, 1.875rem);
+  /* Space m-l: 24px → 40px */
+  --space-m-l: clamp(1.5rem, 1.3571rem + 0.7143vw, 2.5rem);
+  /* Space l-xl: 32px → 60px */
+  --space-l-xl: clamp(2rem, 1.75rem + 1.25vw, 3.75rem);
+  /* Space xl-2xl: 48px → 80px */
+  --space-xl-2xl: clamp(3rem, 2.7143rem + 1.4286vw, 5rem);
+  /* Space 2xl-3xl: 64px → 100px */
+  --space-2xl-3xl: clamp(4rem, 3.6786rem + 1.6071vw, 6.25rem);
+  /* Space 3xl-4xl: 80px → 120px */
+  --space-3xl-4xl: clamp(5rem, 4.6429rem + 1.7857vw, 7.5rem);
+
+  /* Custom pairs */
+  /* Space s-l: 16px → 40px */
+  --space-s-l: clamp(1rem, 0.7857rem + 1.0714vw, 2.5rem);
+}
+
+/* Font sizes */
+p,
+a,
+li,
+input,
+label {
+  font-size: var(--space-s);
+}
+
+h6,
+button {
+  font-size: var(--space-s);
+}
+
+h5 {
+  font-size: var(--space-s-m);
+}
+
+h4 {
+  font-size: var(--space-m);
+}
+
+h3 {
+  font-size: var(--space-m-l);
+}
+
+h2 {
+  font-size: var(--space-l);
+}
+
+h1 {
+  font-size: var(--space-l-xl);
+}
+
+@media (min-width: 700px) {
+  h1 {
+    flex-direction: row;
+  }
+
+  main {
+    padding-bottom: 0;
+    padding: var(--space-m) var(--space-3xl);
+  }
 }

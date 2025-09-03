@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 function App() {
   return (
-    <div className="content">
+    <main>
       <h1>
         Welcome to my <br />
         TCP Chat App!
@@ -13,7 +13,7 @@ function App() {
       <button>
         <Link to={"/server"}>Create a Server</Link>
       </button>
-    </div>
+    </main>
   );
 }
 
