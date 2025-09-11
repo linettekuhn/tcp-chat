@@ -3,7 +3,7 @@ import { startClient, stopClient, sendCommand } from "../api/tcpClient";
 import Message from "../components/Message";
 import styles from "./Client.module.css";
 import { IoSend } from "react-icons/io5";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 
 function Client() {
   const [port, setPort] = useState(31337);
@@ -155,6 +155,7 @@ function Client() {
           </div>
         </div>
       )}
+      <ToastContainer />
     </main>
   );
 }
