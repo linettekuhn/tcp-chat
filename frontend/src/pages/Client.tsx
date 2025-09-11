@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { startClient, stopClient, sendCommand } from "../../api/tcpClient";
+import { startClient, stopClient, sendCommand } from "../api/tcpClient";
 import Message from "../components/Message";
 import styles from "./Client.module.css";
 import { IoSend } from "react-icons/io5";
+import { toast } from "react-toastify";
 
 function Client() {
   const [port, setPort] = useState(31337);
@@ -12,23 +13,6 @@ function Client() {
   const [connected, setConnected] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-
-  const handleClientStart = async () => {
-    await startClient(port, serverAddress);
-    setConnected(true);
-    recieveMessages();
-  };
-
-  const handleClientStop = async () => {
-    closeMessageStream();
-    await stopClient();
-    setConnected(false);
-    setMessages([]);
-  };
-
-  const handleSendCommand = async () => {
-    await sendCommand(command);
-  };
 
   const recieveMessages = () => {
     if (eventSourceRef.current) {
@@ -47,9 +31,47 @@ function Client() {
 
     eventSource.onerror = (error) => {
       console.error("SSE Error:", error);
+      toast.error("SSE error");
       eventSource.close();
       eventSourceRef.current = null;
     };
+  };
+
+  const handleClientStart = async () => {
+    try {
+      await startClient(port, serverAddress);
+      setConnected(true);
+      recieveMessages();
+      toast.success("Client started!");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      }
+    }
+  };
+
+  const handleClientStop = async () => {
+    try {
+      closeMessageStream();
+      await stopClient();
+      setConnected(false);
+      setMessages([]);
+      toast.warning("Client stopped");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      }
+    }
+  };
+
+  const handleSendCommand = async () => {
+    try {
+      await sendCommand(command);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      }
+    }
   };
 
   const closeMessageStream = () => {

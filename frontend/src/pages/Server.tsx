@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { startServer, stopServer, getHostIP } from "../../api/tcpServer";
+import { startServer, stopServer, getHostIP } from "../api/tcpServer";
 import styles from "./Server.module.css";
 import {
   sendAdminCommand,
   startAdminClient,
   stopAdminClient,
-} from "../../api/tcpServer";
+} from "../api/tcpServer";
 
 function Server() {
   const [port, setPort] = useState(31337);
