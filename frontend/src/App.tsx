@@ -1,18 +1,15 @@
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 function App() {
+  const navigate = useNavigate();
   return (
     <main>
       <h1>
         Welcome to my <br />
         TCP Chat App!
       </h1>
-      <button>
-        <Link to={"/client"}>Connect as Client</Link>
-      </button>
-      <button>
-        <Link to={"/server"}>Create a Server</Link>
-      </button>
+      <button onClick={() => navigate("/client")}>Connect as Client</button>
+      <button onClick={() => navigate("/server")}>Create a Server</button>
     </main>
   );
 }
