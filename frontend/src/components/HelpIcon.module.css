@@ -1,0 +1,49 @@
+.helpIcon {
+  position: absolute;
+  right: var(--space-m);
+  bottom: var(--space-l);
+  display: flex;
+  flex-direction: column;
+  align-items: end;
+  justify-content: end;
+}
+
+.helpButton {
+  padding: 0;
+  border: none;
+  background-color: rgba(0, 0, 0, 0);
+}
+
+.helpButton:hover {
+  background-color: rgba(0, 0, 0, 0);
+}
+
+.helpButton svg {
+  font-size: var(--space-xl);
+  color: rgb(65, 65, 65);
+}
+
+.helpText {
+  position: relative;
+  z-index: 99;
+  margin: 0;
+  background-color: rgb(176, 176, 176);
+  border: 2px solid rgb(91, 91, 91);
+  padding: var(--space-s) var(--space-l);
+  border-radius: var(--space-s);
+  width: 60vw;
+}
+
+.helpText p {
+  text-align: center;
+}
+
+@media (min-width: 700px) {
+  .helpIcon {
+    right: var(--space-xl);
+    bottom: var(--space-xl);
+  }
+  .helpText {
+    width: 35vw;
+  }
+}

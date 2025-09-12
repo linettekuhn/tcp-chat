@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import HelpIcon from "./components/HelpIcon";
 
 function App() {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ function App() {
       </h1>
       <button onClick={() => navigate("/client")}>Connect as Client</button>
       <button onClick={() => navigate("/server")}>Create a Server</button>
+      <HelpIcon />
     </main>
   );
 }
