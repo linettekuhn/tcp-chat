@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { startServer, stopServer, getHostIP } from "../../api/tcpServer";
+import { startServer, stopServer, getHostIP } from "../api/tcpServer";
 import styles from "./Server.module.css";
 import {
   sendAdminCommand,
   startAdminClient,
   stopAdminClient,
-} from "../../api/tcpServer";
+} from "../api/tcpServer";
+import { toast, ToastContainer } from "react-toastify";
 
 function Server() {
   const [port, setPort] = useState(31337);
@@ -18,8 +19,15 @@ function Server() {
 
   useEffect(() => {
     const fetchIP = async () => {
-      const ip = await getHostIP();
-      setServerAddress(ip);
+      try {
+        const ip = await getHostIP();
+        setServerAddress(ip);
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          toast.error(error.message);
+        }
+        setServerAddress("127.0.0.1");
+      }
     };
 
     fetchIP();
@@ -66,8 +74,14 @@ function Server() {
       // recieve message until promise is resolved
       const promise = recieveMessages();
 
-      // send commands to get list
-      await sendAdminCommand(`${commandChar}getlist`);
+      try {
+        // send commands to get list
+        await sendAdminCommand(`${commandChar}getlist`);
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          toast.error(error.message);
+        }
+      }
 
       // wait for promise to be resolved and stop temp client
       await promise;
@@ -86,9 +100,28 @@ function Server() {
   }, [isActive, commandChar]);
 
   const startAdmin = async () => {
-    await startAdminClient(port, serverAddress);
-    await sendAdminCommand(`${commandChar}register admin 123`);
-    await sendAdminCommand(`${commandChar}login admin 123`);
+    try {
+      await startAdminClient(port, serverAddress);
+      await sendAdminCommand(`${commandChar}register admin 123`);
+      await sendAdminCommand(`${commandChar}login admin 123`);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      }
+    }
+  };
+
+  const handleServerStart = async () => {
+    try {
+      await startServer(port, capacity, commandChar);
+      await startAdmin();
+      setActive(true);
+      toast.success("Server started!");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      }
+    }
   };
 
   const closeAdmin = async () => {
@@ -96,23 +129,30 @@ function Server() {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
-    await stopAdminClient();
-  };
-
-  const handleServerStart = async () => {
-    await startServer(port, capacity, commandChar);
-    await startAdmin();
-    setActive(true);
+    try {
+      await stopAdminClient();
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      }
+    }
   };
 
   const handleServerStop = async () => {
-    await stopServer(port, serverAddress);
-    await closeAdmin();
-    setActive(false);
+    try {
+      await stopServer(port, serverAddress);
+      await closeAdmin();
+      setActive(false);
+      toast.success("Server stopped!");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      }
+    }
   };
 
   return (
-    <div className={`${styles.server} content`}>
+    <main className={styles.server}>
       <form className={styles.serverOptions} action="server">
         <h1>Server Options</h1>
         <label htmlFor="port">
@@ -186,7 +226,8 @@ function Server() {
           </ul>
         </div>
       </div>
-    </div>
+      <ToastContainer />
+    </main>
   );
 }
 export default Server;
