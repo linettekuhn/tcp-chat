@@ -41,7 +41,7 @@ function Server() {
       }
 
       const eventSource = new EventSource(
-        "https://tcp-chat-backend.onrender.com/server/output-admin"
+        "https://api.tcp-chat.linettekuhn.com/server/output-admin"
       );
       eventSourceRef.current = eventSource;
 

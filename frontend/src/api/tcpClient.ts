@@ -16,7 +16,7 @@ async function handleResponse(res: Response) {
 
 export async function startClient(port: number, serverAddress: string) {
   const response = await handleResponse(
-    await fetch("https://tcp-chat-backend.onrender.com/client/start", {
+    await fetch("https://api.tcp-chat.linettekuhn.com/client/start", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -30,7 +30,7 @@ export async function startClient(port: number, serverAddress: string) {
 
 export async function sendCommand(command: string) {
   const response = await handleResponse(
-    await fetch("https://tcp-chat-backend.onrender.com/client/command", {
+    await fetch("https://api.tcp-chat.linettekuhn.com/client/command", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -44,7 +44,7 @@ export async function sendCommand(command: string) {
 
 export async function stopClient() {
   await handleResponse(
-    await fetch("https://tcp-chat-backend.onrender.com/client/stop", {
+    await fetch("https://api.tcp-chat.linettekuhn.com/client/stop", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

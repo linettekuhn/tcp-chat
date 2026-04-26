@@ -20,7 +20,7 @@ function Client() {
     }
 
     const eventSource = new EventSource(
-      "https://tcp-chat-backend.onrender.com/client/output"
+      "https://api.tcp-chat.linettekuhn.com/client/output"
     );
     eventSourceRef.current = eventSource;
 
