@@ -11,6 +11,10 @@ app.listen(PORT, () => {
   console.log(`app listening on port: ${PORT}`);
 });
 
+app.get("/", (req, res) => {
+  res.send("TCP Chat backend is running!");
+});
+
 const serverRouter = require("./routes/server");
 app.use("/server", serverRouter);
 console.log("server router initialized");
