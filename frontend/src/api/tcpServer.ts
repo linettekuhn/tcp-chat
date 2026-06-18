@@ -53,7 +53,7 @@ export async function getHostIP() {
       },
     })
   );
-  const ip = response.text();
+  const ip = await response.text();
   return ip;
 }
 

@@ -68,7 +68,7 @@ router.post("/start", (req, res) => {
 router.post("/stop", (req, res) => {
   const { port, serverAddress } = req.body;
   if (!port || !serverAddress) {
-    res.status(400).send("Missing port or server IP address in request.");
+    return res.status(400).send("Missing port or server IP address in request.");
   }
   const shutdownCmd = `${cmdChar}shutdown\n`;
   const disconnectCmd = `${cmdChar}disconnect\n`;
