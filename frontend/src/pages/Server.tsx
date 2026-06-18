@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { startServer, stopServer, getHostIP } from "../api/tcpServer";
+import { BASEURL } from "../api/config";
 import styles from "./Server.module.css";
 import {
   sendAdminCommand,
@@ -41,7 +42,7 @@ function Server() {
       }
 
       const eventSource = new EventSource(
-        "https://api.tcp-chat.linettekuhn.com/server/output-admin"
+        `${BASEURL}/server/output-admin`
       );
       eventSourceRef.current = eventSource;
 

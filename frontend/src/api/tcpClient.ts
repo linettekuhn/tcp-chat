@@ -1,3 +1,5 @@
+import { BASEURL } from "./config";
+
 async function handleResponse(res: Response) {
   if (!res.ok) {
     const errorBody = await res.text();
@@ -16,7 +18,7 @@ async function handleResponse(res: Response) {
 
 export async function startClient(port: number, serverAddress: string) {
   const response = await handleResponse(
-    await fetch("https://api.tcp-chat.linettekuhn.com/client/start", {
+    await fetch(`${BASEURL}/client/start`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -30,7 +32,7 @@ export async function startClient(port: number, serverAddress: string) {
 
 export async function sendCommand(command: string) {
   const response = await handleResponse(
-    await fetch("https://api.tcp-chat.linettekuhn.com/client/command", {
+    await fetch(`${BASEURL}/client/command`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -44,7 +46,7 @@ export async function sendCommand(command: string) {
 
 export async function stopClient() {
   await handleResponse(
-    await fetch("https://api.tcp-chat.linettekuhn.com/client/stop", {
+    await fetch(`${BASEURL}/client/stop`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
