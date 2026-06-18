@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { startClient, stopClient, sendCommand } from "../api/tcpClient";
+import { BASEURL } from "../api/config";
 import Message from "../components/Message";
 import styles from "./Client.module.css";
 import { IoSend } from "react-icons/io5";
@@ -20,7 +21,7 @@ function Client() {
     }
 
     const eventSource = new EventSource(
-      "https://api.tcp-chat.linettekuhn.com/client/output"
+      `${BASEURL}/client/output`
     );
     eventSourceRef.current = eventSource;
 

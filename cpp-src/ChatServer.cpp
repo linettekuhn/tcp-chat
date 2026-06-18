@@ -257,15 +257,19 @@ bool ChatServer::handleClients()
                 FD_CLR(s, &_writeSet);
             }
             else if (commandName == "getlist") {
-                std::string response = "(SERVER) Logged in users:\n";
-                for (auto iter = _loggedIn.begin(); iter != _loggedIn.end(); ++iter)
-                {
-                    std::string username = iter->first;
-                    response += username + '\n';
-                }
-                if (response.empty())
+                std::string response;
+                if (_loggedIn.empty())
                 {
                     response = "(SERVER) No users logged in";
+                }
+                else
+                {
+                    response = "(SERVER) Logged in users:\n";
+                    for (auto iter = _loggedIn.begin(); iter != _loggedIn.end(); ++iter)
+                    {
+                        std::string username = iter->first;
+                        response += username + '\n';
+                    }
                 }
                 sendMessage(s, response.c_str(), static_cast<int32_t>(response.size() + 1));
             }
