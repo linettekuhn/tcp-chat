@@ -59,7 +59,7 @@ router.post("/start", (req, res) => {
 
   // handle process exiting during startup
   client.once("exit", (code) => {
-    if (!responded && code !== 0) {
+    if (!responded) {
       errorHandler(
         `Process exited with code ${code}`,
         "Client process exited unexpectedly"
