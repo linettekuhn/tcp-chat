@@ -152,6 +152,9 @@ int main(int argc, char* argv[])
 					break;
 				}
 			}
+		} else {
+			std::cerr << "(SERVER) Failed to initialize server." << std::endl;
+			return 1;
 		}
 
 		// wait until all detached threads finish (threadCount reaches 0)
