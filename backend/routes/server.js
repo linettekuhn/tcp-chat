@@ -106,12 +106,12 @@ router.get("/host-ip", (req, res) => {
 
   // loop thru network interfaces
   for (const name in interfaces) {
-    for (const interface of interfaces[name]) {
+    for (const netInterface of interfaces[name]) {
       // find first non-internal ipv4 ip address
       if (
-        interface.family === "IPv4" &&
-        interface.address !== "127.0.0.1" &&
-        !interface.internal
+        netInterface.family === "IPv4" &&
+        netInterface.address !== "127.0.0.1" &&
+        !netInterface.internal
       ) {
         address = interface.address;
         break;
