@@ -27,21 +27,41 @@ router.post("/start", (req, res) => {
     String(commandChar),
   ]);
 
+  let responded = false;
+
   // error checks
   server.on("error", (error) => {
-    console.error("Failed to start server:", error);
-    return res.status(500).send("Failed to start server");
+    if (!responded) {
+      responded = true;
+      console.error("Failed to start server:", error);
+      res.status(500).send("Failed to start server");
+    }
   });
 
   server.stderr.once("data", (data) => {
-    console.error(`Server Error: ${data}`);
-    return res.status(500).send(`Server Error: ${data}`);
+    if (!responded) {
+      responded = true;
+      console.error(`Server Error: ${data}`);
+      res.status(500).send(`Server Error: ${data}`);
+    }
   });
 
   // output stream
   server.stdout.once("data", (data) => {
-    console.log(`Server: ${data}`);
-    res.status(200).send(`Server: ${data}`);
+    if (!responded) {
+      responded = true;
+      console.log(`Server: ${data}`);
+      res.status(200).send(`Server: ${data}`);
+    }
+  });
+
+  // handle process exiting without producing output (e.g. init failure)
+  server.once("exit", (code) => {
+    if (!responded) {
+      responded = true;
+      console.error(`Server process exited unexpectedly with code ${code}`);
+      res.status(500).send(`Server process exited unexpectedly with code ${code}`);
+    }
   });
 });
 
