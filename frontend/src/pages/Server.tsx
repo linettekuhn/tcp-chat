@@ -109,6 +109,7 @@ function Server() {
       if (error instanceof Error) {
         toast.error(error.message);
       }
+      throw error;
     }
   };
 
@@ -119,6 +120,7 @@ function Server() {
       setActive(true);
       toast.success("Server started!");
     } catch (error: unknown) {
+      try { await stopServer(port, serverAddress); } catch { /* ignore */ }
       if (error instanceof Error) {
         toast.error(error.message);
       }
