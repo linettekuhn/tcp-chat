@@ -1,5 +1,5 @@
 # 1) Build image for the C++ server using CMake
-FROM ubuntu:22.04 as builder
+FROM ubuntu:22.04 AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -38,7 +38,7 @@ RUN chmod +x ./bin/TCPChatServer
 RUN npm install
 
 # Expose port
-EXPOSE 3000
+EXPOSE 3003
 
 # Start Node.js server
 CMD ["node", "index.js"]
