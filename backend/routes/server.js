@@ -60,7 +60,9 @@ router.post("/start", (req, res) => {
     if (!responded) {
       responded = true;
       console.error(`Server process exited unexpectedly with code ${code}`);
-      res.status(500).send(`Server process exited unexpectedly with code ${code}`);
+      res
+        .status(500)
+        .send(`Server process exited unexpectedly with code ${code}`);
     }
   });
 });
@@ -68,7 +70,9 @@ router.post("/start", (req, res) => {
 router.post("/stop", (req, res) => {
   const { port, serverAddress } = req.body;
   if (!port || !serverAddress) {
-    return res.status(400).send("Missing port or server IP address in request.");
+    return res
+      .status(400)
+      .send("Missing port or server IP address in request.");
   }
   const shutdownCmd = `${cmdChar}shutdown\n`;
   const disconnectCmd = `${cmdChar}disconnect\n`;
@@ -113,7 +117,7 @@ router.get("/host-ip", (req, res) => {
         netInterface.address !== "127.0.0.1" &&
         !netInterface.internal
       ) {
-        address = interface.address;
+        address = netInterface.address;
         break;
       }
     }
@@ -156,7 +160,7 @@ router.post("/start-admin", (req, res) => {
   admin.on("error", (error) => errorHandler(error, "Failed to start admin"));
 
   admin.stderr.once("data", (data) =>
-    errorHandler(data.toString(), "Admin client Error")
+    errorHandler(data.toString(), "Admin client Error"),
   );
 
   // output stream
@@ -178,7 +182,7 @@ router.post("/start-admin", (req, res) => {
     if (!responded && code !== 0) {
       errorHandler(
         `Process exited with code ${code}`,
-        "Admin client process exited unexpectedly"
+        "Admin client process exited unexpectedly",
       );
     }
   });
