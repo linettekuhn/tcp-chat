@@ -2,7 +2,6 @@
   flex-direction: column;
   justify-content: space-evenly;
   overflow-y: scroll;
-  padding: var(--space-xl) var(--space-l);
 }
 
 .serverOptions {

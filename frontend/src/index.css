@@ -52,11 +52,6 @@ main {
   display: flex;
   flex: 1;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: var(--space-l);
-  padding: var(--space-l);
-  padding-bottom: var(--space-xl);
 }
 
 #root {
@@ -268,10 +263,5 @@ h1 {
 @media (min-width: 700px) {
   h1 {
     flex-direction: row;
-  }
-
-  main {
-    padding-bottom: 0;
-    padding: var(--space-m) var(--space-3xl);
   }
 }

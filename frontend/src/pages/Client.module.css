@@ -1,7 +1,3 @@
-.client {
-  flex-direction: column;
-}
-
 .clientOptions {
   display: flex;
   flex-direction: column;

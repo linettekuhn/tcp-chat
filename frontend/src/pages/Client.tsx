@@ -1,10 +1,21 @@
 import { useEffect, useRef, useState } from "react";
+import {
+  Text,
+  TextInput,
+  Button,
+  Group,
+  Stack,
+  Tooltip,
+  NumberInput,
+  ActionIcon,
+} from "@mantine/core";
 import { startClient, stopClient, sendCommand } from "../api/tcpClient";
 import { BASEURL } from "../api/config";
 import Message from "../components/Message";
 import styles from "./Client.module.css";
 import { IoSend } from "react-icons/io5";
 import { toast, ToastContainer } from "react-toastify";
+import { MdContentPaste, MdHelpOutline } from "react-icons/md";
 
 function Client() {
   const [port, setPort] = useState(31337);
@@ -20,9 +31,7 @@ function Client() {
       return;
     }
 
-    const eventSource = new EventSource(
-      `${BASEURL}/client/output`
-    );
+    const eventSource = new EventSource(`${BASEURL}/client/output`);
     eventSourceRef.current = eventSource;
 
     eventSource.onmessage = (event) => {
@@ -91,36 +100,110 @@ function Client() {
   return (
     <main className={styles.client}>
       {!connected ? (
-        <form className={styles.clientOptions} action="client">
-          <h1>Connect to a Server</h1>
-          <label htmlFor="port">
-            <p>Port:</p>
-            <input
-              name="port"
-              type="number"
-              placeholder="31337"
-              value={port}
-              onChange={(e) => {
-                setPort(Number(e.target.value));
-              }}
-            />
-          </label>
-          <label htmlFor="serverAddress">
-            <p>Server IP Address:</p>
-            <input
-              name="serverAddress"
-              type="text"
-              placeholder="127.0.0.1"
-              value={serverAddress}
-              onChange={(e) => {
-                setServerAddress(e.target.value);
-              }}
-            />
-          </label>
-          <button type="button" onClick={handleClientStart}>
-            Connect
-          </button>
-        </form>
+        <Stack
+          align="stretch"
+          p="xs"
+          flex={1}
+          style={{
+            background: "var(--color-tab-bar-background)",
+          }}
+        >
+          <Text size="sm">
+            Enter the server's IP address and port to join. You'll need to
+            create an account or log in before you can send messages.
+          </Text>
+          <Group align="flex-end" gap="xl">
+            <Stack gap="xs" style={{ flexShrink: 0 }}>
+              <Tooltip label="The port number the server is listening on.">
+                <Group
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-start",
+                    gap: 4,
+                    flexWrap: "nowrap",
+                  }}
+                >
+                  <Text fw={600} size="xs">
+                    LISTENING_PORT
+                  </Text>
+                  <MdHelpOutline />
+                </Group>
+              </Tooltip>
+              <NumberInput
+                value={port}
+                min={1024}
+                max={65535}
+                clampBehavior="strict"
+                onChange={(value) => setPort(Number(value) || 0)}
+                radius={0}
+                hideControls
+                rightSection={
+                  <Tooltip label="Paste port" position="top" withArrow>
+                    <ActionIcon
+                      variant="subtle"
+                      color="dimmed"
+                      onClick={async () => {
+                        try {
+                          const text = await navigator.clipboard.readText();
+                          setPort(Number(text) || 0);
+                          toast.success("Pasted!");
+                        } catch {
+                          toast.error("Failed to paste");
+                        }
+                      }}
+                    >
+                      <MdContentPaste size={14} />
+                    </ActionIcon>
+                  </Tooltip>
+                }
+              />
+            </Stack>
+            <Stack gap="xs" style={{ flexShrink: 0 }}>
+              <Tooltip label="The IP address of the server you want to join.">
+                <Group
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-start",
+                    gap: 4,
+                    flexWrap: "nowrap",
+                  }}
+                >
+                  <Text fw={600} size="xs">
+                    SERVER_IP
+                  </Text>
+                  <MdHelpOutline />
+                </Group>
+              </Tooltip>
+              <TextInput
+                radius={0}
+                value={serverAddress}
+                onChange={(e) => setServerAddress(e.target.value)}
+                rightSection={
+                  <Tooltip label="Paste IP" position="top" withArrow>
+                    <ActionIcon
+                      variant="subtle"
+                      color="dimmed"
+                      onClick={async () => {
+                        try {
+                          const text = await navigator.clipboard.readText();
+                          setServerAddress(text);
+                          toast.success("Pasted!");
+                        } catch {
+                          toast.error("Failed to paste");
+                        }
+                      }}
+                    >
+                      <MdContentPaste size={14} />
+                    </ActionIcon>
+                  </Tooltip>
+                }
+              />
+            </Stack>
+            <Button onClick={handleClientStart} radius={0} c="black">
+              JOIN_SERVER
+            </Button>
+          </Group>
+        </Stack>
       ) : (
         <div className={styles.connectedClientView}>
           <button type="button" onClick={handleClientStop}>

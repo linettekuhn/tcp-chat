@@ -1,13 +1,27 @@
 import { useState, useEffect, useRef } from "react";
-import { startServer, stopServer, getHostIP } from "../api/tcpServer";
-import { BASEURL } from "../api/config";
-import styles from "./Server.module.css";
 import {
-  sendAdminCommand,
-  startAdminClient,
+  Text,
+  TextInput,
+  Button,
+  Group,
+  Tooltip,
+  Stack,
+  NumberInput,
+  CopyButton,
+  ActionIcon,
+} from "@mantine/core";
+import {
+  startServer,
+  stopServer,
+  getHostIP,
   stopAdminClient,
 } from "../api/tcpServer";
+import { BASEURL } from "../api/config";
+import styles from "./Server.module.css";
+import { sendAdminCommand, startAdminClient } from "../api/tcpServer";
 import { toast, ToastContainer } from "react-toastify";
+import { MdHelpOutline, MdOutlineCopyAll } from "react-icons/md";
+import { IoCopy, IoCopyOutline } from "react-icons/io5";
 
 function Server() {
   const [port, setPort] = useState(31337);
@@ -41,9 +55,7 @@ function Server() {
         return;
       }
 
-      const eventSource = new EventSource(
-        `${BASEURL}/server/output-admin`
-      );
+      const eventSource = new EventSource(`${BASEURL}/server/output-admin`);
       eventSourceRef.current = eventSource;
 
       eventSource.onmessage = (event) => {
@@ -120,7 +132,11 @@ function Server() {
       setActive(true);
       toast.success("Server started!");
     } catch (error: unknown) {
-      try { await stopServer(port, serverAddress); } catch { /* ignore */ }
+      try {
+        await stopServer(port, serverAddress);
+      } catch {
+        /* ignore */
+      }
       if (error instanceof Error) {
         toast.error(error.message);
       }
@@ -156,79 +172,187 @@ function Server() {
 
   return (
     <main className={styles.server}>
-      <form className={styles.serverOptions} action="server">
-        <h1>Server Options</h1>
-        <label htmlFor="port">
-          <p>Port:</p>
-          <input
-            name="port"
-            type="number"
-            value={port}
-            onChange={(e) => setPort(Number(e.target.value))}
-          />
-        </label>
-        <label htmlFor="capacity">
-          <p>Capacity:</p>
-          <input
-            name="capacity"
-            type="number"
-            value={capacity}
-            onChange={(e) => setCapacity(Number(e.target.value))}
-          />
-        </label>
-        <label htmlFor="cmdChar">
-          <p>Command Char:</p>
-          <input
-            name="cmdChar"
-            type="text"
-            value={commandChar}
-            onChange={(e) => setCmdChar(e.target.value)}
-          />
-        </label>
-        <label htmlFor="IP">
-          <p>Server IP Address:</p>
-          <input
-            name="IP"
-            type="text"
-            value={serverAddress}
-            onChange={(e) => {
-              setServerAddress(e.target.value);
-            }}
-          />
-        </label>
-        <div className={styles.buttons}>
-          <button disabled={isActive} type="button" onClick={handleServerStart}>
-            Start Server
-          </button>
-          <button disabled={!isActive} type="button" onClick={handleServerStop}>
-            Shutdown Server
-          </button>
-        </div>
-      </form>
-      <div className={styles.users}>
-        <h2>Users</h2>
-        <div className={styles.serverLog}>
-          <div className={styles.serverStatus}>
-            Server Status:
-            {isActive ? (
-              <p className="bold" style={{ color: "green" }}>
-                Active
-              </p>
-            ) : (
-              <p className="bold italic" style={{ color: "red" }}>
-                Inactive
-              </p>
-            )}
+      {!isActive ? (
+        <Stack
+          align="stretch"
+          p="xs"
+          flex={1}
+          style={{
+            background: "var(--color-tab-bar-background)",
+          }}
+        >
+          <Text size="sm">
+            Choose a port, set your capacity limit, and start listening for
+            connections. Once the server is running, share the IP and port with
+            anyone you want to connect.
+          </Text>
+          <Group align="flex-end" gap="xl">
+            <Stack gap="xs" style={{ flexShrink: 0 }}>
+              <Tooltip label="The port your server listens on for incoming connections. Use a number between 1024–65535 that isn't already in use.">
+                <Group
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-start",
+                    gap: 4,
+                    flexWrap: "nowrap",
+                  }}
+                >
+                  <Text fw={600} size="xs">
+                    LISTENING_PORT
+                  </Text>
+                  <MdHelpOutline />
+                </Group>
+              </Tooltip>
+              <NumberInput
+                value={port}
+                min={1024}
+                max={65535}
+                clampBehavior="strict"
+                onChange={(value) => setPort(Number(value) || 0)}
+                radius={0}
+                hideControls
+                rightSection={
+                  <CopyButton value={String(port)}>
+                    {({ copied, copy }) => (
+                      <Tooltip
+                        label={copied ? "Copied" : "Copy port"}
+                        position="top"
+                        withArrow
+                      >
+                        <ActionIcon
+                          color={copied ? "teal" : "dimmed"}
+                          variant="subtle"
+                          onClick={copy}
+                        >
+                          <MdOutlineCopyAll size={14} />
+                        </ActionIcon>
+                      </Tooltip>
+                    )}
+                  </CopyButton>
+                }
+              />
+            </Stack>
+            <Stack gap="xs" style={{ flexShrink: 0 }}>
+              <Tooltip label="The IP address clients will use to connect to your server. Share this along with the port.">
+                <Group
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-start",
+                    gap: 4,
+                    flexWrap: "nowrap",
+                  }}
+                >
+                  <Text fw={600} size="xs">
+                    SERVER_IP
+                  </Text>
+                  <MdHelpOutline />
+                </Group>
+              </Tooltip>
+              <TextInput
+                radius={0}
+                value={serverAddress}
+                onChange={(e) => setServerAddress(e.target.value)}
+                rightSection={
+                  <CopyButton value={serverAddress}>
+                    {({ copied, copy }) => (
+                      <Tooltip
+                        label={copied ? "Copied" : "Copy IP"}
+                        position="top"
+                        withArrow
+                      >
+                        <ActionIcon
+                          color={copied ? "teal" : "dimmed"}
+                          variant="subtle"
+                          onClick={copy}
+                        >
+                          <MdOutlineCopyAll size={14} />
+                        </ActionIcon>
+                      </Tooltip>
+                    )}
+                  </CopyButton>
+                }
+              />
+            </Stack>
+            <Stack gap="xs" style={{ flexShrink: 0 }}>
+              <Tooltip label="The maximum number of accounts that can be registered on this server. Once reached, new registrations will be ignored.">
+                <Group
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-start",
+                    gap: 4,
+                    flexWrap: "nowrap",
+                  }}
+                >
+                  <Text fw={600} size="xs">
+                    CAPACITY
+                  </Text>
+                  <MdHelpOutline />
+                </Group>
+              </Tooltip>
+              <NumberInput
+                value={capacity}
+                min={1}
+                clampBehavior="strict"
+                onChange={(value) => setCapacity(Number(value) || 0)}
+                radius={0}
+                w={150}
+              />
+            </Stack>
+            <Stack gap="xs" style={{ flexShrink: 0 }}>
+              <Tooltip label="The character that begins every command, like ~help or ~login.">
+                <Group
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-start",
+                    gap: 4,
+                    flexWrap: "nowrap",
+                  }}
+                >
+                  <Text fw={600} size="xs">
+                    CMD_CHAR
+                  </Text>
+                  <MdHelpOutline />
+                </Group>
+              </Tooltip>
+              <TextInput
+                radius={0}
+                w={150}
+                maxLength={1}
+                value={commandChar}
+                onChange={(e) => setCmdChar(e.target.value)}
+              />
+            </Stack>
+            <Button onClick={handleServerStart} radius={0} c="black">
+              LAUNCH_SERVER
+            </Button>
+          </Group>
+        </Stack>
+      ) : (
+        <div className={styles.users}>
+          <h2>Users</h2>
+          <div className={styles.serverLog}>
+            <div className={styles.serverStatus}>
+              Server Status:
+              {isActive ? (
+                <p className="bold" style={{ color: "green" }}>
+                  Active
+                </p>
+              ) : (
+                <p className="bold italic" style={{ color: "red" }}>
+                  Inactive
+                </p>
+              )}
+            </div>
+            <ul className={styles.activeUsers}>
+              {activeUsers.length > 0 ? (
+                activeUsers.map((user) => <li key={user}>{user}</li>)
+              ) : (
+                <li>No users</li>
+              )}
+            </ul>
           </div>
-          <ul className={styles.activeUsers}>
-            {activeUsers.length > 0 ? (
-              activeUsers.map((user) => <li key={user}>{user}</li>)
-            ) : (
-              <li>No users</li>
-            )}
-          </ul>
         </div>
-      </div>
+      )}
       <ToastContainer />
     </main>
   );
