@@ -1,21 +1,5 @@
 /* Fonts */
-@import url("https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,100..900;1,100..900&family=Chivo:ital,wght@0,100..900;1,100..900&display=swap");
-
-h1,
-h2,
-h3,
-h4 {
-  font-family: "Bitter";
-}
-
-p,
-button,
-a,
-input,
-li,
-select {
-  font-family: "Chivo";
-}
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap");
 
 /* Box sizing rules */
 *,
@@ -82,7 +66,6 @@ main {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  font-family: inherit;
   color: inherit;
 }
 
@@ -221,6 +204,31 @@ textarea:not([rows]) {
   /* Custom pairs */
   /* Space s-l: 16px → 40px */
   --space-s-l: clamp(1rem, 0.7857rem + 1.0714vw, 2.5rem);
+
+  --color-background: light-dark(
+    var(--mantine-color-dark-1),
+    var(--mantine-color-dark-8)
+  );
+  --color-tab-bar-background: light-dark(
+    var(--mantine-color-gray-2),
+    var(--mantine-color-gray-8)
+  );
+  --color-top-bar-background: light-dark(
+    var(--mantine-color-gray-1),
+    var(--mantine-color-gray-9)
+  );
+  --color-drawer-background: light-dark(
+    var(--mantine-color-gray-1),
+    var(--mantine-color-gray-9)
+  );
+  --color-text: light-dark(
+    var(--mantine-color-black),
+    var(--mantine-color-white)
+  );
+  --color-alert: light-dark(
+    var(--mantine-color-red-6),
+    var(--mantine-color-red-4)
+  );
 }
 
 /* Font sizes */
