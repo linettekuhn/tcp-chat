@@ -12,6 +12,7 @@ import Client from "./pages/Client";
 import HelpIcon from "./components/HelpIcon";
 import { ImTerminal } from "react-icons/im";
 import { LuLogIn, LuRadio } from "react-icons/lu";
+import styles from "./App.module.css";
 
 function App() {
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
@@ -52,6 +53,7 @@ function App() {
       </Group>
       <Tabs
         defaultValue="start_server"
+        classNames={{ tab: styles.tab }}
         style={{
           display: "flex",
           flexDirection: "column",
@@ -65,40 +67,30 @@ function App() {
             background: "var(--color-tab-bar-background)",
           }}
         >
-          <Tabs.Tab value="start_server" style={{ borderRadius: 0 }}>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.35rem",
-              }}
+          <Tabs.Tab
+            value="start_server"
+            style={{ borderRadius: 0 }}
+            leftSection={<LuRadio size="1.2em" />}
+          >
+            <Text
+              size="sm"
+              style={{ textTransform: "uppercase", fontWeight: 700 }}
             >
-              <LuRadio size="1.2em" />
-              <Text
-                size="sm"
-                style={{ textTransform: "uppercase", fontWeight: 700 }}
-              >
-                start_server
-              </Text>
-            </span>
+              start_server
+            </Text>
           </Tabs.Tab>
 
-          <Tabs.Tab value="join_server" style={{ borderRadius: 0 }}>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.35rem",
-              }}
+          <Tabs.Tab
+            value="join_server"
+            style={{ borderRadius: 0 }}
+            leftSection={<LuLogIn size="1.2em" />}
+          >
+            <Text
+              size="sm"
+              style={{ textTransform: "uppercase", fontWeight: 700 }}
             >
-              <LuLogIn size="1.2em" />
-              <Text
-                size="sm"
-                style={{ textTransform: "uppercase", fontWeight: 700 }}
-              >
-                join_server
-              </Text>
-            </span>
+              join_server
+            </Text>
           </Tabs.Tab>
         </Tabs.List>
         <Tabs.Panel
