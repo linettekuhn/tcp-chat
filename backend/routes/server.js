@@ -74,34 +74,58 @@ router.post("/stop", (req, res) => {
       .status(400)
       .send("Missing port or server IP address in request.");
   }
-  const shutdownCmd = `${cmdChar}shutdown\n`;
-  const disconnectCmd = `${cmdChar}disconnect\n`;
 
-  // spawn temp client to send shutdown command
+  let responded = false;
+
+  const finish = () => {
+    if (!responded) {
+      responded = true;
+      cmdChar = null;
+      res.status(200).send("Server was shutdown");
+    }
+  };
+
+  // primary path: send shutdown through the already connected admin client
+  if (admin && cmdChar) {
+    admin.stdin.write(`${cmdChar}shutdown\n`);
+
+    admin.once("exit", () => {
+      admin = null;
+      finish();
+    });
+
+    // safety timeout: force-kill admin if it doesn't exit
+    setTimeout(() => {
+      if (admin) {
+        admin.kill();
+      }
+      finish();
+    }, 3000);
+
+    return;
+  }
+
+  // fallback path: spawn a temporary client
   const client = spawn(serverPath, ["1", String(port), serverAddress]);
+  client.stdin.write(`${cmdChar || ""}shutdown\n`);
 
-  // input commands to shutdown server and disconnect temp client
-  client.stdin.write(shutdownCmd);
-  client.stdin.write(disconnectCmd);
-
-  // error checks
   client.on("error", (error) => {
-    console.error("Failed to start client:", error);
-    return res.status(500).send("Failed to start client");
+    if (!responded) {
+      responded = true;
+      cmdChar = null;
+      res.status(500).send("Failed to start client: " + error.message);
+    }
   });
 
-  client.stderr.once("data", (data) => {
-    console.error(`Client Error: ${data}`);
-    return res.status(500).send(`Client Error: ${data}`);
+  client.on("exit", () => {
+    finish();
   });
 
-  // output stream
-  client.stdout.once("data", (data) => {
-    console.log(`Client: ${data}`);
+  // safety timeout: force-kill temp client if it doesn't exit
+  setTimeout(() => {
     client.kill();
-    cmdChar = null;
-    return res.status(200).send(`Server was shutdown`);
-  });
+    finish();
+  }, 3000);
 });
 
 router.get("/host-ip", (req, res) => {
@@ -236,6 +260,10 @@ router.get("/output-admin", (req, res) => {
     return res.status(400).send("Admin client not running");
   }
 
+  // capture local reference so event callbacks aren't affected
+  // if the module-level admin variable is mutated later
+  const currentAdmin = admin;
+
   // treat response as server-side event (SSE) stream
   res.set({
     "Content-Type": "text/event-stream",
@@ -257,7 +285,7 @@ router.get("/output-admin", (req, res) => {
   };
 
   // call handler on data recieved
-  admin.stdout.on("data", outputHandler);
+  currentAdmin.stdout.on("data", outputHandler);
 
   let closed = false;
 
@@ -266,17 +294,17 @@ router.get("/output-admin", (req, res) => {
     if (!closed) {
       closed = true;
       console.log("Admin client disconnected from SSE stream");
-      admin.stdout.off("data", outputHandler);
+      currentAdmin.stdout.off("data", outputHandler);
       res.end();
     }
   });
 
   // cleanup if admin process exits
-  admin.once("exit", (code) => {
+  currentAdmin.once("exit", (code) => {
     if (!closed) {
       closed = true;
       console.log(`Process exited with code ${code}. Closing SSE stream`);
-      admin.stdout.off("data", outputHandler);
+      currentAdmin.stdout.off("data", outputHandler);
       res.end();
     }
   });

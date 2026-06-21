@@ -85,13 +85,3 @@ export async function sendAdminCommand(command: string) {
   return msg;
 }
 
-export async function stopAdminClient() {
-  await handleResponse(
-    await fetch(`${BASEURL}/server/stop-admin`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-  );
-}

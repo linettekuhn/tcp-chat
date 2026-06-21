@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   Text,
   TextInput,
@@ -10,7 +10,7 @@ import {
 } from "@mantine/core";
 import { startClient, stopClient, sendCommand } from "../api/tcpClient";
 import { BASEURL } from "../api/config";
-import Message from "../components/Message";
+import Chatbox from "../components/Chatbox";
 import styles from "./Client.module.css";
 import { IoSend } from "react-icons/io5";
 import { toast, ToastContainer } from "react-toastify";
@@ -24,7 +24,6 @@ function Client() {
   const [messages, setMessages] = useState<string[]>([]);
   const [connected, setConnected] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const recieveMessages = () => {
     if (eventSourceRef.current) {
@@ -90,12 +89,6 @@ function Client() {
       eventSourceRef.current = null;
     }
   };
-
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages]);
 
   return (
     <main className={styles.client}>
@@ -185,13 +178,7 @@ function Client() {
           <button type="button" onClick={handleClientStop}>
             Stop Client
           </button>
-          <div className={styles.chatbox}>
-            <div className={styles.messages}>
-              {messages.map((message: string, index: number) => (
-                <Message key={index} msg={message} />
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
+          <Chatbox messages={messages}>
             <div className={styles.commandInput}>
               <input
                 type="text"
@@ -212,7 +199,7 @@ function Client() {
                 <IoSend />
               </button>
             </div>
-          </div>
+          </Chatbox>
         </div>
       )}
       <ToastContainer />

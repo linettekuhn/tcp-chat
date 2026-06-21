@@ -14,11 +14,11 @@ import {
   startServer,
   stopServer,
   getHostIP,
-  stopAdminClient,
 } from "../api/tcpServer";
 import { BASEURL } from "../api/config";
 import styles from "./Server.module.css";
 import { sendAdminCommand, startAdminClient } from "../api/tcpServer";
+import Chatbox from "../components/Chatbox";
 import { toast, ToastContainer } from "react-toastify";
 import {
   MdHelpOutline,
@@ -53,6 +53,7 @@ function Server() {
   const [isActive, setActive] = useState(false);
   const [activeUsers, setActiveUsers] = useState<string[]>([]);
   const [inactiveUsers, setInactiveUsers] = useState<string[]>([]);
+  const [chatMessages, setChatMessages] = useState<string[]>([]);
   const eventSourceRef = useRef<EventSource | null>(null);
   const collectingRef = useRef<{
     list: "active" | "registered" | null;
@@ -81,6 +82,7 @@ function Server() {
     if (!isActive) {
       setActiveUsers([]);
       setInactiveUsers([]);
+      setChatMessages([]);
       activeUsersRef.current = [];
       registeredUsersRef.current = [];
       return;
@@ -109,6 +111,7 @@ function Server() {
     // parse incoming data
     eventSource.onmessage = (event) => {
       for (const data of event.data.split("\n")) {
+        setChatMessages((prev) => [...prev, data]);
         if (data === "(SERVER) Logged in users:") {
           finalizeCollection(); // flush any prior incomplete collection
           // start collecting active usernames (logged in)
@@ -151,6 +154,7 @@ function Server() {
       eventSourceRef.current = null;
       setActiveUsers([]);
       setInactiveUsers([]);
+      setChatMessages([]);
       activeUsersRef.current = [];
       registeredUsersRef.current = [];
       collectingRef.current = { list: null, usernames: [] };
@@ -198,25 +202,6 @@ function Server() {
       setActive(true);
       toast.success("Server started!");
     } catch (error: unknown) {
-      try {
-        await stopServer(port, serverAddress);
-      } catch {
-        /* ignore */
-      }
-      if (error instanceof Error) {
-        toast.error(error.message);
-      }
-    }
-  };
-
-  const closeAdmin = async () => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
-    try {
-      await stopAdminClient();
-    } catch (error: unknown) {
       if (error instanceof Error) {
         toast.error(error.message);
       }
@@ -224,10 +209,16 @@ function Server() {
   };
 
   const handleServerStop = async () => {
+    // tear down frontend state immediately so polling and SSE stop
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+    setActive(false);
+
+    // then shut down the backend
     try {
       await stopServer(port, serverAddress);
-      await closeAdmin();
-      setActive(false);
       toast.success("Server stopped!");
     } catch (error: unknown) {
       if (error instanceof Error) {
@@ -239,255 +230,268 @@ function Server() {
   return (
     <main className={styles.server}>
       {!isActive ? (
-        <Stack
-          align="stretch"
-          p="xs"
-          flex={1}
-          style={{
-            background: "var(--color-tab-bar-background)",
-          }}
-        >
-          <Text size="sm">
-            Choose a port, set your capacity limit, and start listening for
-            connections. Once the server is running, share the IP and port with
-            anyone you want to connect.
-          </Text>
-          <Group align="flex-end" gap="xl">
-            <Stack gap="xs" style={{ flexShrink: 0 }}>
-              <Tooltip label="The port your server listens on for incoming connections. Use a number between 1024–65535 that isn't already in use.">
-                <Group
-                  style={{
-                    display: "flex",
-                    justifyContent: "flex-start",
-                    gap: 4,
-                    flexWrap: "nowrap",
-                  }}
-                >
-                  <Text fw={600} size="xs">
-                    LISTENING_PORT
-                  </Text>
-                  <MdHelpOutline />
-                </Group>
-              </Tooltip>
-              <NumberInput
-                rightSectionWidth={36}
-                value={port}
-                min={1024}
-                max={65535}
-                clampBehavior="strict"
-                onChange={(value) => setPort(Number(value) || 0)}
-                radius={0}
-                hideControls
-                rightSection={
-                  <CustomCopyButton value={String(port)} valueName="port" />
-                }
-              />
-            </Stack>
-            <Stack gap="xs" style={{ flexShrink: 0 }}>
-              <Tooltip label="The IP address clients will use to connect to your server. Share this along with the port.">
-                <Group
-                  style={{
-                    display: "flex",
-                    justifyContent: "flex-start",
-                    gap: 4,
-                    flexWrap: "nowrap",
-                  }}
-                >
-                  <Text fw={600} size="xs">
-                    SERVER_IP
-                  </Text>
-                  <MdHelpOutline />
-                </Group>
-              </Tooltip>
-              <TextInput
-                rightSectionWidth={36}
-                radius={0}
-                value={serverAddress}
-                onChange={(e) => setServerAddress(e.target.value)}
-                rightSection={
-                  <CustomCopyButton value={serverAddress} valueName="IP" />
-                }
-              />
-            </Stack>
-            <Stack gap="xs" style={{ flexShrink: 0 }}>
-              <Tooltip label="The maximum number of accounts that can be registered on this server. Once reached, new registrations will be ignored.">
-                <Group
-                  style={{
-                    display: "flex",
-                    justifyContent: "flex-start",
-                    gap: 4,
-                    flexWrap: "nowrap",
-                  }}
-                >
-                  <Text fw={600} size="xs">
-                    CAPACITY
-                  </Text>
-                  <MdHelpOutline />
-                </Group>
-              </Tooltip>
-              <NumberInput
-                rightSectionWidth={36}
-                value={capacity}
-                min={1}
-                clampBehavior="strict"
-                onChange={(value) => setCapacity(Number(value) || 0)}
-                radius={0}
-                w={150}
-              />
-            </Stack>
-            <Stack gap="xs" style={{ flexShrink: 0 }}>
-              <Tooltip label="The character that begins every command, like ~help or ~login.">
-                <Group
-                  style={{
-                    display: "flex",
-                    justifyContent: "flex-start",
-                    gap: 4,
-                    flexWrap: "nowrap",
-                  }}
-                >
-                  <Text fw={600} size="xs">
-                    CMD_CHAR
-                  </Text>
-                  <MdHelpOutline />
-                </Group>
-              </Tooltip>
-              <TextInput
-                rightSectionWidth={36}
-                radius={0}
-                w={150}
-                maxLength={1}
-                value={commandChar}
-                onChange={(e) => setCmdChar(e.target.value)}
-              />
-            </Stack>
-            <Button onClick={handleServerStart} radius={0} c="black">
-              LAUNCH_SERVER
-            </Button>
-          </Group>
+        <Stack flex={1} gap={0} h="100%" w="100%" align="flex-start">
+          <Stack
+            p="xs"
+            w="100%"
+            style={{
+              background: "var(--color-tab-bar-background)",
+              alignSelf: "flex-start",
+            }}
+          >
+            <Text size="sm">
+              Choose a port, set your capacity limit, and start listening for
+              connections. Once the server is running, share the IP and port
+              with anyone you want to connect.
+            </Text>
+            <Group align="flex-end" gap="xl">
+              <Stack gap="xs" style={{ flexShrink: 0 }}>
+                <Tooltip label="The port your server listens on for incoming connections. Use a number between 1024–65535 that isn't already in use.">
+                  <Group
+                    style={{
+                      display: "flex",
+                      justifyContent: "flex-start",
+                      gap: 4,
+                      flexWrap: "nowrap",
+                    }}
+                  >
+                    <Text fw={600} size="xs">
+                      LISTENING_PORT
+                    </Text>
+                    <MdHelpOutline />
+                  </Group>
+                </Tooltip>
+                <NumberInput
+                  rightSectionWidth={36}
+                  value={port}
+                  min={1024}
+                  max={65535}
+                  clampBehavior="strict"
+                  onChange={(value) => setPort(Number(value) || 0)}
+                  radius={0}
+                  hideControls
+                  rightSection={
+                    <CustomCopyButton value={String(port)} valueName="port" />
+                  }
+                />
+              </Stack>
+              <Stack gap="xs" style={{ flexShrink: 0 }}>
+                <Tooltip label="The IP address clients will use to connect to your server. Share this along with the port.">
+                  <Group
+                    style={{
+                      display: "flex",
+                      justifyContent: "flex-start",
+                      gap: 4,
+                      flexWrap: "nowrap",
+                    }}
+                  >
+                    <Text fw={600} size="xs">
+                      SERVER_IP
+                    </Text>
+                    <MdHelpOutline />
+                  </Group>
+                </Tooltip>
+                <TextInput
+                  rightSectionWidth={36}
+                  radius={0}
+                  value={serverAddress}
+                  onChange={(e) => setServerAddress(e.target.value)}
+                  rightSection={
+                    <CustomCopyButton value={serverAddress} valueName="IP" />
+                  }
+                />
+              </Stack>
+              <Stack gap="xs" style={{ flexShrink: 0 }}>
+                <Tooltip label="The maximum number of accounts that can be registered on this server. Once reached, new registrations will be ignored.">
+                  <Group
+                    style={{
+                      display: "flex",
+                      justifyContent: "flex-start",
+                      gap: 4,
+                      flexWrap: "nowrap",
+                    }}
+                  >
+                    <Text fw={600} size="xs">
+                      CAPACITY
+                    </Text>
+                    <MdHelpOutline />
+                  </Group>
+                </Tooltip>
+                <NumberInput
+                  rightSectionWidth={36}
+                  value={capacity}
+                  min={1}
+                  clampBehavior="strict"
+                  onChange={(value) => setCapacity(Number(value) || 0)}
+                  radius={0}
+                  w={150}
+                />
+              </Stack>
+              <Stack gap="xs" style={{ flexShrink: 0 }}>
+                <Tooltip label="The character that begins every command, like ~help or ~login.">
+                  <Group
+                    style={{
+                      display: "flex",
+                      justifyContent: "flex-start",
+                      gap: 4,
+                      flexWrap: "nowrap",
+                    }}
+                  >
+                    <Text fw={600} size="xs">
+                      CMD_CHAR
+                    </Text>
+                    <MdHelpOutline />
+                  </Group>
+                </Tooltip>
+                <TextInput
+                  rightSectionWidth={36}
+                  radius={0}
+                  w={150}
+                  maxLength={1}
+                  value={commandChar}
+                  onChange={(e) => setCmdChar(e.target.value)}
+                />
+              </Stack>
+              <Button onClick={handleServerStart} radius={0} c="black">
+                LAUNCH_SERVER
+              </Button>
+            </Group>
+          </Stack>
+          <Chatbox
+            messages={["(SERVER) Launch your server to see the chat log here."]}
+          />
         </Stack>
       ) : (
-        <Stack
-          maw={300}
-          p={16}
-          h="100%"
-          style={{ background: "var(--color-drawer-background)" }}
-        >
-          <Stack>
-            <HeadingText
-              text="server_configuration"
-              IconComponent={MdOutlineTerminal}
-            />
-            <Stack gap={8}>
-              <Group justify="space-between">
-                <Text c="dimmed" tt="uppercase">
-                  max_users
-                </Text>
-                <Text ff="monospace">{capacity}</Text>
-              </Group>
-              <Divider />
-              <Group justify="space-between">
-                <Text c="dimmed" tt="uppercase">
-                  cmd_char
-                </Text>
-                <Text ff="monospace">{commandChar}</Text>
-              </Group>
-            </Stack>
-          </Stack>
-          <Stack>
-            <HeadingText text="connection_info" IconComponent={BiServer} />
-            <Stack
-              c="cyan.9"
-              p={8}
-              style={{
-                border: "1px solid var(--mantine-color-default-border)",
-              }}
-              gap={4}
-            >
-              <Group justify="space-between">
-                <Text tt="uppercase" ff="monospace">
-                  port: {port}
-                </Text>
-                <CustomCopyButton value={String(port)} valueName="port" />
-              </Group>
-              <Group justify="space-between">
-                <Text tt="uppercase" ff="monospace">
-                  server_ip: {serverAddress}
-                </Text>
-                <CustomCopyButton value={serverAddress} valueName="IP" />
-              </Group>
+        <Group h="100%" w="100%" align="flex-start">
+          <Chatbox messages={chatMessages} />
+          <Stack
+            maw={300}
+            p={16}
+            h="100%"
+            style={{ background: "var(--color-drawer-background)" }}
+          >
+            <Stack>
+              <HeadingText
+                text="server_configuration"
+                IconComponent={MdOutlineTerminal}
+              />
+              <Stack gap={8}>
+                <Group justify="space-between">
+                  <Text c="dimmed" tt="uppercase">
+                    max_users
+                  </Text>
+                  <Text ff="monospace">{capacity}</Text>
+                </Group>
+                <Divider />
+                <Group justify="space-between">
+                  <Text c="dimmed" tt="uppercase">
+                    cmd_char
+                  </Text>
+                  <Text ff="monospace">{commandChar}</Text>
+                </Group>
+              </Stack>
             </Stack>
             <Stack>
-              <Group justify="space-between">
-                <HeadingText
-                  text="active_sessions"
-                  IconComponent={MdOutlinePeopleAlt}
-                />
-                <Group px={4} py={2} bdrs={4} className={styles.activeCounter}>
-                  <Text c="primary" size="xs">
-                    {activeUsers.length} / {capacity}
-                  </Text>
-                </Group>
-              </Group>
-              <Stack gap={8}>
-                {activeUsers.map((username) => {
-                  return (
-                    <Group
-                      key={username}
-                      p={8}
-                      style={{
-                        backgroundColor:
-                          "light-dark(var(--mantine-color-gray-2), var(--mantine-color-gray-8))",
-                      }}
-                    >
-                      <Indicator
-                        ml={20}
-                        color="green.4"
-                        offset={-16}
-                        position="middle-start"
-                      >
-                        <Text tt="uppercase" ff="monospace">
-                          {username}
-                        </Text>
-                      </Indicator>
-                    </Group>
-                  );
-                })}
-                {inactiveUsers.map((username) => {
-                  return (
-                    <Group
-                      key={username}
-                      p={8}
-                      style={{
-                        backgroundColor:
-                          "light-dark(var(--mantine-color-gray-2), var(--mantine-color-gray-8))",
-                      }}
-                    >
-                      <Indicator
-                        ml={20}
-                        disabled
-                        offset={-16}
-                        position="middle-start"
-                      >
-                        <Text tt="uppercase" ff="monospace">
-                          {username}
-                        </Text>
-                      </Indicator>
-                    </Group>
-                  );
-                })}
-              </Stack>
-              <Button
-                onClick={handleServerStop}
-                tt="uppercase"
-                color="red.4"
-                c="black"
-                radius={0}
+              <HeadingText text="connection_info" IconComponent={BiServer} />
+              <Stack
+                c="cyan.9"
+                p={8}
+                style={{
+                  border: "1px solid var(--mantine-color-default-border)",
+                }}
+                gap={4}
               >
-                stop_server
-              </Button>
+                <Group justify="space-between">
+                  <Text tt="uppercase" ff="monospace">
+                    port: {port}
+                  </Text>
+                  <CustomCopyButton value={String(port)} valueName="port" />
+                </Group>
+                <Group justify="space-between">
+                  <Text tt="uppercase" ff="monospace">
+                    server_ip: {serverAddress}
+                  </Text>
+                  <CustomCopyButton value={serverAddress} valueName="IP" />
+                </Group>
+              </Stack>
+              <Stack>
+                <Group justify="space-between">
+                  <HeadingText
+                    text="active_sessions"
+                    IconComponent={MdOutlinePeopleAlt}
+                  />
+                  <Group
+                    px={4}
+                    py={2}
+                    bdrs={4}
+                    className={styles.activeCounter}
+                  >
+                    <Text c="primary" size="xs">
+                      {activeUsers.length} / {capacity}
+                    </Text>
+                  </Group>
+                </Group>
+                <Stack gap={8}>
+                  {activeUsers.map((username) => {
+                    return (
+                      <Group
+                        key={username}
+                        p={8}
+                        style={{
+                          backgroundColor:
+                            "light-dark(var(--mantine-color-gray-2), var(--mantine-color-gray-8))",
+                        }}
+                      >
+                        <Indicator
+                          ml={20}
+                          color="green.4"
+                          offset={-16}
+                          position="middle-start"
+                        >
+                          <Text tt="uppercase" ff="monospace">
+                            {username}
+                          </Text>
+                        </Indicator>
+                      </Group>
+                    );
+                  })}
+                  {inactiveUsers.map((username) => {
+                    return (
+                      <Group
+                        key={username}
+                        p={8}
+                        style={{
+                          backgroundColor:
+                            "light-dark(var(--mantine-color-gray-2), var(--mantine-color-gray-8))",
+                        }}
+                      >
+                        <Indicator
+                          ml={20}
+                          disabled
+                          offset={-16}
+                          position="middle-start"
+                        >
+                          <Text tt="uppercase" ff="monospace">
+                            {username}
+                          </Text>
+                        </Indicator>
+                      </Group>
+                    );
+                  })}
+                </Stack>
+                <Button
+                  onClick={handleServerStop}
+                  tt="uppercase"
+                  color="red.4"
+                  c="black"
+                  radius={0}
+                >
+                  stop_server
+                </Button>
+              </Stack>
             </Stack>
           </Stack>
-        </Stack>
+        </Group>
       )}
       <ToastContainer />
     </main>

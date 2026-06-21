@@ -13,6 +13,10 @@ int ChatServer::init(uint16_t port, char commandChar, int capacity)
         return SETUP_ERROR;
     }
 
+    // allow immediate rebinding to port in TIME_WAIT after restart
+    int optval = 1;
+    setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+
     // create socket address
     sockaddr_in serverAddress;
     serverAddress.sin_family = AF_INET;

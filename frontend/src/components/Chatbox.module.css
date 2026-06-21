@@ -1,0 +1,22 @@
+.chatbox {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.timestamp {
+  font-family: monospace;
+}
+
+.sender {
+  font-weight: 600;
+}
+
+.system {
+  font-style: italic;
+}
