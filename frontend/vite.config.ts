@@ -5,4 +5,10 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   base: "/tcp-chat/",
   plugins: [react()],
+  server: {
+    proxy: {
+      "/server": "http://localhost:3003",
+      "/client": "http://localhost:3003",
+    },
+  },
 });
