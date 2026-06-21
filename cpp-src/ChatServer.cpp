@@ -133,6 +133,7 @@ bool ChatServer::handleClients()
                 std::string(1, _commandChar) + "logout*: log out\n" +
                 std::string(1, _commandChar) + "send* [<user>] \"msg\": send msg\n" +
                 std::string(1, _commandChar) + "getlist*: online users\n" +
+                std::string(1, _commandChar) + "getregistered*: registered users\n" +
                 std::string(1, _commandChar) + "getchatlog*: chat history\n" +
                 std::string(1, _commandChar) + "getcmdlog*: command history ";
             sendMessage(s, response.c_str(), static_cast<int32_t>(response.size() + 1));
@@ -269,6 +270,22 @@ bool ChatServer::handleClients()
                     {
                         std::string username = iter->first;
                         response += username + '\n';
+                    }
+                }
+                sendMessage(s, response.c_str(), static_cast<int32_t>(response.size() + 1));
+            }
+            else if (commandName == "getregistered") {
+                std::string response;
+                if (_registered.empty())
+                {
+                    response = "(SERVER) No users registered";
+                }
+                else
+                {
+                    response = "(SERVER) Registered users:\n";
+                    for (const auto& pair : _registered)
+                    {
+                        response += pair.first + '\n';
                     }
                 }
                 sendMessage(s, response.c_str(), static_cast<int32_t>(response.size() + 1));

@@ -79,6 +79,11 @@
   color: var(--mantine-primary-color-filled);
 }
 
+.activeCounter {
+  background-color: var(--mantine-primary-color-light);
+  color: var(--mantine-primary-color-filled);
+}
+
 @media (min-width: 700px) {
   .server {
     flex-direction: row;

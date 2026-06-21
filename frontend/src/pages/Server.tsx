@@ -8,6 +8,7 @@ import {
   Stack,
   NumberInput,
   Divider,
+  Indicator,
 } from "@mantine/core";
 import {
   startServer,
@@ -19,7 +20,11 @@ import { BASEURL } from "../api/config";
 import styles from "./Server.module.css";
 import { sendAdminCommand, startAdminClient } from "../api/tcpServer";
 import { toast, ToastContainer } from "react-toastify";
-import { MdHelpOutline, MdOutlineTerminal } from "react-icons/md";
+import {
+  MdHelpOutline,
+  MdOutlinePeopleAlt,
+  MdOutlineTerminal,
+} from "react-icons/md";
 import { BiServer } from "react-icons/bi";
 import CustomCopyButton from "../components/CustomCopyButton";
 
@@ -46,7 +51,15 @@ function Server() {
   const [commandChar, setCmdChar] = useState("~");
   const [serverAddress, setServerAddress] = useState("");
   const [isActive, setActive] = useState(false);
+  const [activeUsers, setActiveUsers] = useState<string[]>([]);
+  const [inactiveUsers, setInactiveUsers] = useState<string[]>([]);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const collectingRef = useRef<{
+    list: "active" | "registered" | null;
+    usernames: string[];
+  }>({ list: null, usernames: [] });
+  const activeUsersRef = useRef<string[]>([]);
+  const registeredUsersRef = useRef<string[]>([]);
 
   useEffect(() => {
     const fetchIP = async () => {
@@ -64,64 +77,105 @@ function Server() {
     fetchIP();
   }, []);
 
-  const recieveMessages = (): Promise<void> => {
-    return new Promise((resolve) => {
-      if (eventSourceRef.current) {
-        resolve();
-        return;
+  useEffect(() => {
+    if (!isActive) {
+      setActiveUsers([]);
+      setInactiveUsers([]);
+      activeUsersRef.current = [];
+      registeredUsersRef.current = [];
+      return;
+    }
+
+    // updates states from collected users
+    const finalizeCollection = () => {
+      const { list, usernames } = collectingRef.current;
+      if (list === "active") {
+        setActiveUsers(usernames);
+        activeUsersRef.current = usernames;
+      } else if (list === "registered") {
+        registeredUsersRef.current = usernames;
+        const inactive = usernames.filter(
+          (u) => !activeUsersRef.current.includes(u),
+        );
+        setInactiveUsers(inactive);
       }
+      collectingRef.current = { list: null, usernames: [] };
+    };
 
-      const eventSource = new EventSource(`${BASEURL}/server/output-admin`);
-      eventSourceRef.current = eventSource;
+    // open SSE connection to /server/output-admin
+    const eventSource = new EventSource(`${BASEURL}/server/output-admin`);
+    eventSourceRef.current = eventSource;
 
-      eventSource.onmessage = (event) => {
-        console.log(event.data);
-
-        if (event.data.startsWith("(SERVER) Logged in users:")) {
-          resolve();
+    // parse incoming data
+    eventSource.onmessage = (event) => {
+      for (const data of event.data.split("\n")) {
+        if (data === "(SERVER) Logged in users:") {
+          finalizeCollection(); // flush any prior incomplete collection
+          // start collecting active usernames (logged in)
+          collectingRef.current = { list: "active", usernames: [] };
+        } else if (data === "(SERVER) No users logged in") {
+          finalizeCollection();
+          setActiveUsers([]);
+          activeUsersRef.current = [];
+        } else if (data === "(SERVER) Registered users:") {
+          finalizeCollection();
+          // start collecting registered usernames
+          collectingRef.current = { list: "registered", usernames: [] };
+        } else if (data === "(SERVER) No users registered") {
+          finalizeCollection();
+          registeredUsersRef.current = [];
+          setInactiveUsers([]);
+        } else if (data.startsWith("(SERVER)")) {
+          // other admin messages. terminate any collection thats in progress
+          finalizeCollection();
+        } else if (collectingRef.current.list && data.trim()) {
+          if (!data.includes(": ")) {
+            // username list don't include : like broadcast messages
+            collectingRef.current.usernames.push(data.trim());
+          } else {
+            finalizeCollection();
+          }
         }
-        if (event.data.startsWith("(SERVER) No users logged in")) {
-          resolve();
-        }
-      };
+      }
+    };
 
-      eventSource.onerror = (error) => {
-        console.error("SSE Error:", error);
-        eventSource.close();
-        eventSourceRef.current = null;
-        resolve();
-      };
-    });
-  };
+    eventSource.onerror = (error) => {
+      console.error("SSE Error:", error);
+      eventSource.close();
+      eventSourceRef.current = null;
+    };
+
+    return () => {
+      finalizeCollection();
+      eventSource.close();
+      eventSourceRef.current = null;
+      setActiveUsers([]);
+      setInactiveUsers([]);
+      activeUsersRef.current = [];
+      registeredUsersRef.current = [];
+      collectingRef.current = { list: null, usernames: [] };
+    };
+  }, [isActive]);
 
   useEffect(() => {
-    const fetchActiveUsers = async () => {
-      // recieve message until promise is resolved
-      const promise = recieveMessages();
+    if (!isActive) return;
 
+    const fetchUsers = async () => {
       try {
-        // send commands to get list
         await sendAdminCommand(`${commandChar}getlist`);
+        await sendAdminCommand(`${commandChar}getregistered`);
       } catch (error: unknown) {
         if (error instanceof Error) {
           toast.error(error.message);
         }
+        throw error;
       }
-
-      // wait for promise to be resolved and stop temp client
-      await promise;
     };
 
-    if (isActive) {
-      fetchActiveUsers();
+    fetchUsers();
+    const interval = setInterval(fetchUsers, 5000);
 
-      // call fetch active users function every 5 seconds
-      const interval = setInterval(() => {
-        fetchActiveUsers();
-      }, 5000);
-
-      return () => clearInterval(interval);
-    }
+    return () => clearInterval(interval);
   }, [isActive, commandChar]);
 
   const startAdmin = async () => {
@@ -350,26 +404,87 @@ function Server() {
             >
               <Group justify="space-between">
                 <Text tt="uppercase" ff="monospace">
-                  server_ip: {serverAddress}
-                </Text>
-                <CustomCopyButton value={serverAddress} valueName="IP" />
-              </Group>
-              <Group justify="space-between">
-                <Text tt="uppercase" ff="monospace">
                   port: {port}
                 </Text>
                 <CustomCopyButton value={String(port)} valueName="port" />
               </Group>
+              <Group justify="space-between">
+                <Text tt="uppercase" ff="monospace">
+                  server_ip: {serverAddress}
+                </Text>
+                <CustomCopyButton value={serverAddress} valueName="IP" />
+              </Group>
             </Stack>
-            <Button
-              onClick={handleServerStop}
-              tt="uppercase"
-              color="red.4"
-              c="black"
-              radius={0}
-            >
-              stop_server
-            </Button>
+            <Stack>
+              <Group justify="space-between">
+                <HeadingText
+                  text="active_sessions"
+                  IconComponent={MdOutlinePeopleAlt}
+                />
+                <Group px={4} py={2} bdrs={4} className={styles.activeCounter}>
+                  <Text c="primary" size="xs">
+                    {activeUsers.length} / {capacity}
+                  </Text>
+                </Group>
+              </Group>
+              <Stack gap={8}>
+                {activeUsers.map((username) => {
+                  return (
+                    <Group
+                      key={username}
+                      p={8}
+                      style={{
+                        backgroundColor:
+                          "light-dark(var(--mantine-color-gray-2), var(--mantine-color-gray-8))",
+                      }}
+                    >
+                      <Indicator
+                        ml={20}
+                        color="green.4"
+                        offset={-16}
+                        position="middle-start"
+                      >
+                        <Text tt="uppercase" ff="monospace">
+                          {username}
+                        </Text>
+                      </Indicator>
+                    </Group>
+                  );
+                })}
+                {inactiveUsers.map((username) => {
+                  return (
+                    <Group
+                      key={username}
+                      p={8}
+                      style={{
+                        backgroundColor:
+                          "light-dark(var(--mantine-color-gray-2), var(--mantine-color-gray-8))",
+                      }}
+                    >
+                      <Indicator
+                        ml={20}
+                        disabled
+                        offset={-16}
+                        position="middle-start"
+                      >
+                        <Text tt="uppercase" ff="monospace">
+                          {username}
+                        </Text>
+                      </Indicator>
+                    </Group>
+                  );
+                })}
+              </Stack>
+              <Button
+                onClick={handleServerStop}
+                tt="uppercase"
+                color="red.4"
+                c="black"
+                radius={0}
+              >
+                stop_server
+              </Button>
+            </Stack>
           </Stack>
         </Stack>
       )}
