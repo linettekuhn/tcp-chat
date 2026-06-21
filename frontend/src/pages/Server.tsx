@@ -369,6 +369,7 @@ function Server() {
         <Stack
           maw={300}
           p={16}
+          h="100%"
           style={{ background: "var(--color-drawer-background)" }}
         >
           <Stack>

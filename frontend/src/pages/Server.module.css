@@ -1,7 +1,7 @@
 .server {
   flex-direction: column;
-  justify-content: space-evenly;
   overflow-y: scroll;
+  height: 100%;
 }
 
 .serverOptions {
