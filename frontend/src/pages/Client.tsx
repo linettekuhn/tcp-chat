@@ -7,7 +7,6 @@ import {
   Stack,
   Tooltip,
   NumberInput,
-  ActionIcon,
 } from "@mantine/core";
 import { startClient, stopClient, sendCommand } from "../api/tcpClient";
 import { BASEURL } from "../api/config";
@@ -15,7 +14,8 @@ import Message from "../components/Message";
 import styles from "./Client.module.css";
 import { IoSend } from "react-icons/io5";
 import { toast, ToastContainer } from "react-toastify";
-import { MdContentPaste, MdHelpOutline } from "react-icons/md";
+import { MdHelpOutline } from "react-icons/md";
+import CustomPasteButton from "../components/CustomPasteButton";
 
 function Client() {
   const [port, setPort] = useState(31337);
@@ -137,24 +137,12 @@ function Client() {
                 onChange={(value) => setPort(Number(value) || 0)}
                 radius={0}
                 hideControls
+                rightSectionWidth={36}
                 rightSection={
-                  <Tooltip label="Paste port" position="top" withArrow>
-                    <ActionIcon
-                      variant="subtle"
-                      color="dimmed"
-                      onClick={async () => {
-                        try {
-                          const text = await navigator.clipboard.readText();
-                          setPort(Number(text) || 0);
-                          toast.success("Pasted!");
-                        } catch {
-                          toast.error("Failed to paste");
-                        }
-                      }}
-                    >
-                      <MdContentPaste size={14} />
-                    </ActionIcon>
-                  </Tooltip>
+                  <CustomPasteButton
+                    valueName="port"
+                    onPaste={(text) => setPort(Number(text) || 0)}
+                  />
                 }
               />
             </Stack>
@@ -178,24 +166,12 @@ function Client() {
                 radius={0}
                 value={serverAddress}
                 onChange={(e) => setServerAddress(e.target.value)}
+                rightSectionWidth={36}
                 rightSection={
-                  <Tooltip label="Paste IP" position="top" withArrow>
-                    <ActionIcon
-                      variant="subtle"
-                      color="dimmed"
-                      onClick={async () => {
-                        try {
-                          const text = await navigator.clipboard.readText();
-                          setServerAddress(text);
-                          toast.success("Pasted!");
-                        } catch {
-                          toast.error("Failed to paste");
-                        }
-                      }}
-                    >
-                      <MdContentPaste size={14} />
-                    </ActionIcon>
-                  </Tooltip>
+                  <CustomPasteButton
+                    valueName="IP"
+                    onPaste={(text) => setServerAddress(text)}
+                  />
                 }
               />
             </Stack>

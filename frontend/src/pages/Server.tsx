@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type ComponentType } from "react";
 import {
   Text,
   TextInput,
@@ -7,8 +7,7 @@ import {
   Tooltip,
   Stack,
   NumberInput,
-  CopyButton,
-  ActionIcon,
+  Divider,
 } from "@mantine/core";
 import {
   startServer,
@@ -20,8 +19,26 @@ import { BASEURL } from "../api/config";
 import styles from "./Server.module.css";
 import { sendAdminCommand, startAdminClient } from "../api/tcpServer";
 import { toast, ToastContainer } from "react-toastify";
-import { MdHelpOutline, MdOutlineCopyAll } from "react-icons/md";
-import { IoCopy, IoCopyOutline } from "react-icons/io5";
+import { MdHelpOutline, MdOutlineTerminal } from "react-icons/md";
+import { BiServer } from "react-icons/bi";
+import CustomCopyButton from "../components/CustomCopyButton";
+
+function HeadingText({
+  text,
+  IconComponent,
+}: {
+  text: string;
+  IconComponent: ComponentType<object>;
+}) {
+  return (
+    <Group justify="flex-start" gap={8} className={styles.headingText}>
+      <IconComponent />
+      <Text size="sm" tt="uppercase" fw={600}>
+        {text}
+      </Text>
+    </Group>
+  );
+}
 
 function Server() {
   const [port, setPort] = useState(31337);
@@ -29,7 +46,6 @@ function Server() {
   const [commandChar, setCmdChar] = useState("~");
   const [serverAddress, setServerAddress] = useState("");
   const [isActive, setActive] = useState(false);
-  const [activeUsers, setActiveUsers] = useState<string[]>([]);
   const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
@@ -62,13 +78,9 @@ function Server() {
         console.log(event.data);
 
         if (event.data.startsWith("(SERVER) Logged in users:")) {
-          const msgComponents = event.data.split(":");
-          const users = msgComponents[1].split("\n");
-          setActiveUsers(users);
           resolve();
         }
         if (event.data.startsWith("(SERVER) No users logged in")) {
-          setActiveUsers([]);
           resolve();
         }
       };
@@ -204,6 +216,7 @@ function Server() {
                 </Group>
               </Tooltip>
               <NumberInput
+                rightSectionWidth={36}
                 value={port}
                 min={1024}
                 max={65535}
@@ -212,23 +225,7 @@ function Server() {
                 radius={0}
                 hideControls
                 rightSection={
-                  <CopyButton value={String(port)}>
-                    {({ copied, copy }) => (
-                      <Tooltip
-                        label={copied ? "Copied" : "Copy port"}
-                        position="top"
-                        withArrow
-                      >
-                        <ActionIcon
-                          color={copied ? "teal" : "dimmed"}
-                          variant="subtle"
-                          onClick={copy}
-                        >
-                          <MdOutlineCopyAll size={14} />
-                        </ActionIcon>
-                      </Tooltip>
-                    )}
-                  </CopyButton>
+                  <CustomCopyButton value={String(port)} valueName="port" />
                 }
               />
             </Stack>
@@ -249,27 +246,12 @@ function Server() {
                 </Group>
               </Tooltip>
               <TextInput
+                rightSectionWidth={36}
                 radius={0}
                 value={serverAddress}
                 onChange={(e) => setServerAddress(e.target.value)}
                 rightSection={
-                  <CopyButton value={serverAddress}>
-                    {({ copied, copy }) => (
-                      <Tooltip
-                        label={copied ? "Copied" : "Copy IP"}
-                        position="top"
-                        withArrow
-                      >
-                        <ActionIcon
-                          color={copied ? "teal" : "dimmed"}
-                          variant="subtle"
-                          onClick={copy}
-                        >
-                          <MdOutlineCopyAll size={14} />
-                        </ActionIcon>
-                      </Tooltip>
-                    )}
-                  </CopyButton>
+                  <CustomCopyButton value={serverAddress} valueName="IP" />
                 }
               />
             </Stack>
@@ -290,6 +272,7 @@ function Server() {
                 </Group>
               </Tooltip>
               <NumberInput
+                rightSectionWidth={36}
                 value={capacity}
                 min={1}
                 clampBehavior="strict"
@@ -315,6 +298,7 @@ function Server() {
                 </Group>
               </Tooltip>
               <TextInput
+                rightSectionWidth={36}
                 radius={0}
                 w={150}
                 maxLength={1}
@@ -328,30 +312,66 @@ function Server() {
           </Group>
         </Stack>
       ) : (
-        <div className={styles.users}>
-          <h2>Users</h2>
-          <div className={styles.serverLog}>
-            <div className={styles.serverStatus}>
-              Server Status:
-              {isActive ? (
-                <p className="bold" style={{ color: "green" }}>
-                  Active
-                </p>
-              ) : (
-                <p className="bold italic" style={{ color: "red" }}>
-                  Inactive
-                </p>
-              )}
-            </div>
-            <ul className={styles.activeUsers}>
-              {activeUsers.length > 0 ? (
-                activeUsers.map((user) => <li key={user}>{user}</li>)
-              ) : (
-                <li>No users</li>
-              )}
-            </ul>
-          </div>
-        </div>
+        <Stack
+          maw={300}
+          p={16}
+          style={{ background: "var(--color-drawer-background)" }}
+        >
+          <Stack>
+            <HeadingText
+              text="server_configuration"
+              IconComponent={MdOutlineTerminal}
+            />
+            <Stack gap={8}>
+              <Group justify="space-between">
+                <Text c="dimmed" tt="uppercase">
+                  max_users
+                </Text>
+                <Text ff="monospace">{capacity}</Text>
+              </Group>
+              <Divider />
+              <Group justify="space-between">
+                <Text c="dimmed" tt="uppercase">
+                  cmd_char
+                </Text>
+                <Text ff="monospace">{commandChar}</Text>
+              </Group>
+            </Stack>
+          </Stack>
+          <Stack>
+            <HeadingText text="connection_info" IconComponent={BiServer} />
+            <Stack
+              c="cyan.9"
+              p={8}
+              style={{
+                border: "1px solid var(--mantine-color-default-border)",
+              }}
+              gap={4}
+            >
+              <Group justify="space-between">
+                <Text tt="uppercase" ff="monospace">
+                  server_ip: {serverAddress}
+                </Text>
+                <CustomCopyButton value={serverAddress} valueName="IP" />
+              </Group>
+              <Group justify="space-between">
+                <Text tt="uppercase" ff="monospace">
+                  port: {port}
+                </Text>
+                <CustomCopyButton value={String(port)} valueName="port" />
+              </Group>
+            </Stack>
+            <Button
+              onClick={handleServerStop}
+              tt="uppercase"
+              color="red.4"
+              c="black"
+              radius={0}
+            >
+              stop_server
+            </Button>
+          </Stack>
+        </Stack>
       )}
       <ToastContainer />
     </main>

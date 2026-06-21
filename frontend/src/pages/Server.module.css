@@ -75,6 +75,10 @@
   list-style: none;
 }
 
+.headingText {
+  color: var(--mantine-primary-color-filled);
+}
+
 @media (min-width: 700px) {
   .server {
     flex-direction: row;

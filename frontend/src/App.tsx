@@ -72,10 +72,7 @@ function App() {
             style={{ borderRadius: 0 }}
             leftSection={<LuRadio size="1.2em" />}
           >
-            <Text
-              size="sm"
-              style={{ textTransform: "uppercase", fontWeight: 700 }}
-            >
+            <Text size="sm" tt="uppercase" fw={600}>
               start_server
             </Text>
           </Tabs.Tab>
@@ -85,10 +82,7 @@ function App() {
             style={{ borderRadius: 0 }}
             leftSection={<LuLogIn size="1.2em" />}
           >
-            <Text
-              size="sm"
-              style={{ textTransform: "uppercase", fontWeight: 700 }}
-            >
+            <Text size="sm" tt="uppercase" fw={600}>
               join_server
             </Text>
           </Tabs.Tab>
