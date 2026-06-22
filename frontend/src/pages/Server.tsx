@@ -51,6 +51,7 @@ function Server() {
   const [commandChar, setCmdChar] = useState("~");
   const [serverAddress, setServerAddress] = useState("");
   const [isActive, setActive] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [activeUsers, setActiveUsers] = useState<string[]>([]);
   const [inactiveUsers, setInactiveUsers] = useState<string[]>([]);
   const [chatMessages, setChatMessages] = useState<string[]>([]);
@@ -168,11 +169,8 @@ function Server() {
       try {
         await sendAdminCommand(`${commandChar}getlist`);
         await sendAdminCommand(`${commandChar}getregistered`);
-      } catch (error: unknown) {
-        if (error instanceof Error) {
-          toast.error(error.message);
-        }
-        throw error;
+      } catch {
+        // silently ignore transient errors during stop/restart
       }
     };
 
@@ -196,6 +194,7 @@ function Server() {
   };
 
   const handleServerStart = async () => {
+    setLoading(true);
     try {
       await startServer(port, capacity, commandChar);
       await startAdmin();
@@ -205,10 +204,13 @@ function Server() {
       if (error instanceof Error) {
         toast.error(error.message);
       }
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleServerStop = async () => {
+    setLoading(true);
     // tear down frontend state immediately so polling and SSE stop
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
@@ -217,14 +219,9 @@ function Server() {
     setActive(false);
 
     // then shut down the backend
-    try {
-      await stopServer(port, serverAddress);
-      toast.success("Server stopped!");
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        toast.error(error.message);
-      }
-    }
+    await stopServer(port, serverAddress).catch(() => {});
+    toast.success("Server stopped!");
+    setLoading(false);
   };
 
   return (
@@ -352,7 +349,7 @@ function Server() {
                   onChange={(e) => setCmdChar(e.target.value)}
                 />
               </Stack>
-              <Button onClick={handleServerStart} radius={0} c="black">
+              <Button onClick={handleServerStart} disabled={loading} radius={0} c="black">
                 LAUNCH_SERVER
               </Button>
             </Group>
@@ -481,6 +478,7 @@ function Server() {
                 </Stack>
                 <Button
                   onClick={handleServerStop}
+                  disabled={loading}
                   tt="uppercase"
                   color="red.4"
                   c="black"

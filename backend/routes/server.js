@@ -7,8 +7,41 @@ const os = require("os");
 
 let cmdChar = null;
 let admin = null;
+let serverProcess = null;
 
-router.post("/start", (req, res) => {
+const killServerProcess = () => {
+  if (serverProcess) {
+    serverProcess.kill("SIGTERM");
+    serverProcess = null;
+  }
+};
+
+const waitAndKillServer = () => {
+  if (!serverProcess) return Promise.resolve();
+  return new Promise((resolve) => {
+    const p = serverProcess;
+    serverProcess = null;
+    p.once("exit", () => resolve());
+    p.kill("SIGTERM");
+  });
+};
+
+const killAdmin = () => {
+  if (admin) {
+    admin.kill();
+    admin = null;
+    cmdChar = null;
+  }
+};
+
+process.on("SIGTERM", () => { killServerProcess(); killAdmin(); });
+process.on("SIGINT", () => { killServerProcess(); killAdmin(); });
+
+router.post("/start", async (req, res) => {
+  // kill any orphaned processes from a previous session
+  killAdmin();
+  await waitAndKillServer();
+
   const { port, capacity, commandChar } = req.body;
   cmdChar = commandChar;
 
@@ -26,6 +59,8 @@ router.post("/start", (req, res) => {
     String(capacity),
     String(commandChar),
   ]);
+
+  serverProcess = server;
 
   let responded = false;
 
@@ -57,6 +92,7 @@ router.post("/start", (req, res) => {
 
   // handle process exiting without producing output (e.g. init failure)
   server.once("exit", (code) => {
+    if (serverProcess === server) serverProcess = null;
     if (!responded) {
       responded = true;
       console.error(`Server process exited unexpectedly with code ${code}`);
@@ -81,6 +117,7 @@ router.post("/stop", (req, res) => {
     if (!responded) {
       responded = true;
       cmdChar = null;
+      serverProcess = null;
       res.status(200).send("Server was shutdown");
     }
   };
@@ -89,18 +126,37 @@ router.post("/stop", (req, res) => {
   if (admin && cmdChar) {
     admin.stdin.write(`${cmdChar}shutdown\n`);
 
+    let pending = 0;
+    const tryFinish = () => {
+      if (--pending <= 0) {
+        admin = null;
+        serverProcess = null;
+        finish();
+      }
+    };
+
+    pending++;
     admin.once("exit", () => {
       admin = null;
-      finish();
+      tryFinish();
     });
 
-    // safety timeout: force-kill admin if it doesn't exit
+    if (serverProcess) {
+      pending++;
+      serverProcess.once("exit", () => {
+        serverProcess = null;
+        tryFinish();
+      });
+    }
+
+    // safety timeout: force-kill both if they don't exit
     setTimeout(() => {
-      if (admin) {
-        admin.kill();
-      }
+      if (admin) admin.kill();
+      if (serverProcess) serverProcess.kill();
+      admin = null;
+      serverProcess = null;
       finish();
-    }, 3000);
+    }, 5000);
 
     return;
   }
@@ -151,7 +207,12 @@ router.get("/host-ip", (req, res) => {
 
 router.post("/start-admin", (req, res) => {
   if (admin) {
-    return res.status(400).send("Admin client already running");
+    if (admin.exitCode === null && admin.signalCode === null) {
+      return res.status(400).send("Admin client already running");
+    }
+    // orphaned reference — clean up
+    admin = null;
+    cmdChar = null;
   }
   const { port, serverAddress } = req.body;
 
@@ -245,7 +306,15 @@ router.post("/command-admin", (req, res) => {
     // input command
     admin.stdin.write(command, (error) => {
       if (error) {
-        errorHandler(`Failed to write to stdin: ${error.message}`);
+        // "stream was destroyed" is expected during restart — not an error
+        if (error.message.includes("stream was destroyed")) {
+          if (!responded) {
+            responded = true;
+            res.status(200).send("Command sent");
+          }
+        } else {
+          errorHandler(`Failed to write to stdin: ${error.message}`);
+        }
       } else if (!responded) {
         res.status(200).send("Command sent");
       }

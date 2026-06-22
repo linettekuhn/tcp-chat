@@ -22,3 +22,7 @@ console.log("server router initialized");
 const clientRouter = require("./routes/client");
 app.use("/client", clientRouter);
 console.log("client router initialized");
+
+// final signal handlers. clean up after router handlers have run
+process.on("SIGTERM", () => process.exit(0));
+process.on("SIGINT", () => process.exit(0));

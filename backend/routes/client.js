@@ -7,9 +7,17 @@ const serverPath = path.join(__dirname, "../bin/TCPChatServer");
 let client = null;
 let cmdChar = null;
 
+process.on("SIGTERM", () => { if (client) { client.kill(); client = null; cmdChar = null; } });
+process.on("SIGINT", () => { if (client) { client.kill(); client = null; cmdChar = null; } });
+
 router.post("/start", (req, res) => {
   if (client) {
-    return res.status(400).send("Client already running");
+    if (client.exitCode === null && client.signalCode === null) {
+      return res.status(400).send("Client already running");
+    }
+    // orphaned reference — clean up
+    client = null;
+    cmdChar = null;
   }
   const { port, serverAddress } = req.body;
 
@@ -57,13 +65,14 @@ router.post("/start", (req, res) => {
     }
   });
 
-  // handle process exiting during startup
+  // clean up reference when process exits
   client.once("exit", (code) => {
+    client = null;
+    cmdChar = null;
     if (!responded) {
-      errorHandler(
-        `Process exited with code ${code}`,
-        "Client process exited unexpectedly"
-      );
+      responded = true;
+      console.error(`Client process exited unexpectedly with code ${code}`);
+      res.status(500).send(`Client process exited unexpectedly with code ${code}`);
     }
   });
 });
@@ -116,6 +125,10 @@ router.get("/output", (req, res) => {
     return res.status(400).send("Client not running");
   }
 
+  // capture local reference so event callbacks aren't affected
+  // if the module-level client variable is mutated later
+  const currentClient = client;
+
   // treat response as server-side event (SSE) stream
   res.set({
     "Content-Type": "text/event-stream",
@@ -137,7 +150,7 @@ router.get("/output", (req, res) => {
   };
 
   // call handler on data recieved
-  client.stdout.on("data", outputHandler);
+  currentClient.stdout.on("data", outputHandler);
 
   let closed = false;
 
@@ -146,17 +159,17 @@ router.get("/output", (req, res) => {
     if (!closed) {
       closed = true;
       console.log("Client disconnected from SSE stream");
-      client.stdout.off("data", outputHandler);
+      currentClient.stdout.off("data", outputHandler);
       res.end();
     }
   });
 
   // cleanup if client process exits
-  client.once("exit", (code) => {
+  currentClient.once("exit", (code) => {
     if (!closed) {
       closed = true;
       console.log(`Process exited with code ${code}. Closing SSE stream`);
-      client.stdout.off("data", outputHandler);
+      currentClient.stdout.off("data", outputHandler);
       res.end();
     }
   });
