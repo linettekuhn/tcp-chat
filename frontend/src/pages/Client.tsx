@@ -22,8 +22,12 @@ function Client() {
   const [port, setPort] = useState(31337);
   const [serverAddress, setServerAddress] = useState("");
   const [command, setCommand] = useState("");
+  const [commandChar, setCommandChar] = useState("~");
   const [messages, setMessages] = useState<string[]>([]);
   const [connected, setConnected] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
+  const [username, setUsername] = useState("");
+  const pendingUsernameRef = useRef("");
   const abortRef = useRef<AbortController | null>(null);
 
   const recieveMessages = () => {
@@ -65,12 +69,24 @@ function Client() {
           buffer = parts.pop() || "";
 
           for (const part of parts) {
+            const dataLines: string[] = [];
             for (const line of part.split("\n")) {
               if (line.startsWith("data: ")) {
-                const data = line.slice(6);
-                console.log(data);
-                setMessages((prev) => [...prev, data]);
+                dataLines.push(line.slice(6));
               }
+            }
+            if (dataLines.length === 0) continue;
+            const data = dataLines.join("\n");
+            console.log(data);
+            const cmdCharMatch = data.match(/begin them with: (.)/);
+            if (cmdCharMatch) setCommandChar(cmdCharMatch[1]);
+            setMessages((prev) => [...prev, data]);
+            if (data === "(SERVER) User logged in!") {
+              setSignedIn(true);
+              setUsername(pendingUsernameRef.current);
+            } else if (data === "(SERVER) User logged out!") {
+              setSignedIn(false);
+              setUsername("");
             }
           }
         }
@@ -91,6 +107,8 @@ function Client() {
     try {
       await startClient(port, serverAddress);
       setConnected(true);
+      setSignedIn(false);
+      setUsername("");
       recieveMessages();
       toast.success("Client started!");
     } catch (error: unknown) {
@@ -105,6 +123,8 @@ function Client() {
       closeMessageStream();
       await stopClient();
       setConnected(false);
+      setSignedIn(false);
+      setUsername("");
       setMessages([]);
       toast.warning("Client stopped");
     } catch (error: unknown) {
@@ -115,9 +135,21 @@ function Client() {
   };
 
   const handleSendCommand = async () => {
+    const input = command.trim();
+    const finalCommand = input.startsWith(commandChar)
+      ? input
+      : commandChar + input;
+    const parts = finalCommand.split(/\s+/);
+    if (
+      parts.length >= 3 &&
+      (parts[0] === `${commandChar}register` ||
+        parts[0] === `${commandChar}login`)
+    ) {
+      pendingUsernameRef.current = parts[1];
+    }
     try {
-      console.log("SENDING:", command);
-      await sendCommand(command);
+      console.log("SENDING:", finalCommand);
+      await sendCommand(finalCommand);
       console.log("SEND succeeded, clearing input");
       setCommand("");
     } catch (error: unknown) {
@@ -230,9 +262,11 @@ function Client() {
           </>
         ) : (
           <Group h="100%" justify="space-between">
-            <Badge variant="dot" color="green.4">
-              Connected to {serverAddress}:{port} · You're not signed in
-              yet{" "}
+            <Badge variant="dot" color={signedIn ? "green.4" : "blue.4"}>
+              Connected to {serverAddress}:{port} ·{" "}
+              {signedIn
+                ? `Signed in as ${username}`
+                : "You're not signed in yet"}{" "}
             </Badge>
             <Button
               onClick={handleClientStop}
@@ -249,11 +283,16 @@ function Client() {
       <Chatbox
         messages={
           connected
-            ? [
-                "(SERVER) You're connected. Sign in to start chatting.",
-                "(SERVER) Use the buttons below to register a new account or log in.",
-                ...messages,
-              ]
+            ? signedIn
+              ? [
+                  `(SERVER) You're in. Say something, or use the buttons below to see who's online.`,
+                  ...messages,
+                ]
+              : [
+                  "(SERVER) You're connected. Sign in to start chatting.",
+                  "(SERVER) Use the buttons below to register a new account or log in.",
+                  ...messages,
+                ]
             : ["(SERVER) Connect to a server to see the chat log here."]
         }
       >
@@ -266,11 +305,24 @@ function Client() {
             flex={1}
             radius={0}
             value={command}
-            onChange={(e) => setCommand(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val && !val.startsWith(commandChar)) {
+                setCommand(commandChar + val);
+              } else {
+                setCommand(val);
+              }
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter") handleSendCommand();
             }}
             disabled={!connected}
+            styles={{ input: { fontFamily: "JetBrains Mono" } }}
+            placeholder={
+              connected
+                ? "Execute command or send message..."
+                : "Command input locked until server starts..."
+            }
           />
           <ActionIcon
             disabled={!connected}
