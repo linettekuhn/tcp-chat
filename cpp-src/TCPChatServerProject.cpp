@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <errno.h>
+#include <csignal>
 #include <sys/socket.h>
 
 #define SOCKET int
@@ -173,6 +174,7 @@ int main(int argc, char* argv[])
 		if (client.init(port, address) == SUCCESS)
 		{
 			active = true;
+			signal(SIGPIPE, SIG_IGN);
 			// client input loop
 			while (true)
 			{

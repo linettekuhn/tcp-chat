@@ -248,12 +248,18 @@ bool ChatServer::handleClients()
                     }
                 }
             }
-            else if (commandName == "logout" || commandName == "disconnect") {
+            else if (commandName == "logout") {
                 _loggedIn.erase(_socketToUsername[s]);
                 _socketToUsername.erase(s);
                 std::string response = "(SERVER) User logged out!";
                 sendMessage(s, response.c_str(), static_cast<int32_t>(response.size() + 1));
-                
+            }
+            else if (commandName == "disconnect") {
+                _loggedIn.erase(_socketToUsername[s]);
+                _socketToUsername.erase(s);
+                std::string response = "(SERVER) User logged out!";
+                sendMessage(s, response.c_str(), static_cast<int32_t>(response.size() + 1));
+
                 shutdown(s, SD_BOTH);
                 close(s);
                 FD_CLR(s, &_masterSet);
