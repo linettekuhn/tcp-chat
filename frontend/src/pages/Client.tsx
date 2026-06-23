@@ -13,7 +13,6 @@ import {
 import { startClient, stopClient, sendCommand } from "../api/tcpClient";
 import { BASEURL } from "../api/config";
 import Chatbox from "../components/Chatbox";
-import styles from "./Client.module.css";
 import { toast, ToastContainer } from "react-toastify";
 import { MdHelpOutline } from "react-icons/md";
 import CustomPasteButton from "../components/CustomPasteButton";
@@ -54,7 +53,10 @@ function Client() {
 
         while (true) {
           const { done, value } = await reader.read();
-          if (done) { console.log("SSE stream done"); break; }
+          if (done) {
+            console.log("SSE stream done");
+            break;
+          }
           const chunk = decoder.decode(value, { stream: true });
           console.log("SSE raw chunk:", JSON.stringify(chunk));
           buffer += chunk;
@@ -143,12 +145,13 @@ function Client() {
   }, []);
 
   return (
-    <main className={styles.client}>
+    <Stack w="100%" h="100%" gap={0} style={{ overflow: "hidden" }}>
       <Stack
         align="stretch"
         p="xs"
         style={{
           background: "var(--color-tab-bar-background)",
+          flexShrink: 0,
         }}
       >
         {!connected ? (
@@ -226,7 +229,7 @@ function Client() {
             </Group>
           </>
         ) : (
-          <Group justify="space-between">
+          <Group h="100%" justify="space-between">
             <Badge variant="dot" color="green.4">
               Connected to {serverAddress}:{port} · You're not signed in
               yet{" "}
@@ -264,7 +267,9 @@ function Client() {
             radius={0}
             value={command}
             onChange={(e) => setCommand(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") handleSendCommand(); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleSendCommand();
+            }}
             disabled={!connected}
           />
           <ActionIcon
@@ -278,7 +283,7 @@ function Client() {
         </Group>
       </Chatbox>
       <ToastContainer />
-    </main>
+    </Stack>
   );
 }
 export default Client;

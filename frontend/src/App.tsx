@@ -9,7 +9,6 @@ import {
 import { IoSunny, IoMoon } from "react-icons/io5";
 import Server from "./pages/Server";
 import Client from "./pages/Client";
-import HelpIcon from "./components/HelpIcon";
 import { ImTerminal } from "react-icons/im";
 import { LuLogIn, LuRadio } from "react-icons/lu";
 import styles from "./App.module.css";
@@ -91,7 +90,7 @@ function App() {
           value="start_server"
           style={{
             flex: 1,
-            overflowY: "auto",
+            overflow: "hidden",
             background: "var(--color-background)",
           }}
         >
@@ -101,14 +100,13 @@ function App() {
           value="join_server"
           style={{
             flex: 1,
-            overflowY: "auto",
+            overflow: "hidden",
             background: "var(--color-background)",
           }}
         >
           <Client />
         </Tabs.Panel>
       </Tabs>
-      <HelpIcon />
     </div>
   );
 }

@@ -8,15 +8,10 @@ import {
   Stack,
   NumberInput,
   Divider,
-  Indicator,
+  Badge,
 } from "@mantine/core";
-import {
-  startServer,
-  stopServer,
-  getHostIP,
-} from "../api/tcpServer";
+import { startServer, stopServer, getHostIP } from "../api/tcpServer";
 import { BASEURL } from "../api/config";
-import styles from "./Server.module.css";
 import { sendAdminCommand, startAdminClient } from "../api/tcpServer";
 import Chatbox from "../components/Chatbox";
 import { toast, ToastContainer } from "react-toastify";
@@ -36,7 +31,11 @@ function HeadingText({
   IconComponent: ComponentType<object>;
 }) {
   return (
-    <Group justify="flex-start" gap={8} className={styles.headingText}>
+    <Group
+      justify="flex-start"
+      gap={8}
+      style={{ color: "var(--mantine-primary-color-filled)" }}
+    >
       <IconComponent />
       <Text size="sm" tt="uppercase" fw={600}>
         {text}
@@ -249,7 +248,7 @@ function Server() {
   };
 
   return (
-    <main className={styles.server}>
+    <Stack h="100%" gap={0} style={{ overflow: "hidden" }}>
       {!isActive ? (
         <Stack flex={1} gap={0} h="100%" w="100%" align="flex-start">
           <Stack
@@ -373,7 +372,12 @@ function Server() {
                   onChange={(e) => setCmdChar(e.target.value)}
                 />
               </Stack>
-              <Button onClick={handleServerStart} disabled={loading} radius={0} c="black">
+              <Button
+                onClick={handleServerStart}
+                disabled={loading}
+                radius={0}
+                c="black"
+              >
                 LAUNCH_SERVER
               </Button>
             </Group>
@@ -445,7 +449,10 @@ function Server() {
                     px={4}
                     py={2}
                     bdrs={4}
-                    className={styles.activeCounter}
+                    style={{
+                      backgroundColor: "var(--mantine-primary-color-light)",
+                      color: "var(--mantine-primary-color-filled)",
+                    }}
                   >
                     <Text c="primary" size="xs">
                       {activeUsers.length} / {capacity}
@@ -458,21 +465,21 @@ function Server() {
                       <Group
                         key={username}
                         p={8}
+                        gap={8}
                         style={{
                           backgroundColor:
                             "light-dark(var(--mantine-color-gray-2), var(--mantine-color-gray-8))",
                         }}
                       >
-                        <Indicator
-                          ml={20}
+                        <Badge
                           color="green.4"
-                          offset={-16}
-                          position="middle-start"
-                        >
-                          <Text tt="uppercase" ff="monospace">
-                            {username}
-                          </Text>
-                        </Indicator>
+                          variant="filled"
+                          circle
+                          size="0.7em"
+                        />
+                        <Text tt="uppercase" ff="monospace">
+                          {username}
+                        </Text>
                       </Group>
                     );
                   })}
@@ -481,21 +488,22 @@ function Server() {
                       <Group
                         key={username}
                         p={8}
+                        gap={8}
+                        opacity={0.6}
                         style={{
                           backgroundColor:
                             "light-dark(var(--mantine-color-gray-2), var(--mantine-color-gray-8))",
                         }}
                       >
-                        <Indicator
-                          ml={20}
-                          disabled
-                          offset={-16}
-                          position="middle-start"
-                        >
-                          <Text tt="uppercase" ff="monospace">
-                            {username}
-                          </Text>
-                        </Indicator>
+                        <Badge
+                          color="dark.2"
+                          variant="filled"
+                          circle
+                          size="0.7em"
+                        />
+                        <Text tt="uppercase" ff="monospace">
+                          {username}
+                        </Text>
                       </Group>
                     );
                   })}
@@ -516,7 +524,7 @@ function Server() {
         </Group>
       )}
       <ToastContainer />
-    </main>
+    </Stack>
   );
 }
 export default Server;
