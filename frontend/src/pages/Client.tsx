@@ -29,6 +29,7 @@ function Client() {
   const [username, setUsername] = useState("");
   const pendingUsernameRef = useRef("");
   const abortRef = useRef<AbortController | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const recieveMessages = () => {
     if (abortRef.current) return;
@@ -157,6 +158,30 @@ function Client() {
       if (error instanceof Error) {
         toast.error(error.message);
       }
+    }
+  };
+
+  const commandButtons = [
+    { label: "register", cmd: "register", guestOnly: true },
+    { label: "log in", cmd: "login", guestOnly: true },
+    { label: "help", cmd: "help" },
+    { label: "log out", cmd: "logout", auth: true },
+    { label: "send", cmd: 'send ""', auth: true, cursorEnd: true },
+    { label: "who's online", cmd: "getlist", auth: true },
+    { label: "chat history", cmd: "getchatlog", auth: true },
+    { label: "command history", cmd: "getcmdlog", auth: true },
+  ];
+
+  const handleCommandClick = (cmd: string, cursorEnd?: boolean) => {
+    const full = commandChar + cmd;
+    setCommand(full);
+    inputRef.current?.focus();
+    if (cursorEnd) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+        const pos = full.length - 1;
+        inputRef.current?.setSelectionRange(pos, pos);
+      }, 0);
     }
   };
 
@@ -296,43 +321,69 @@ function Client() {
             : ["(SERVER) Connect to a server to see the chat log here."]
         }
       >
-        <Group
+        <Stack
+          gap={12}
           p={16}
           w="100%"
           style={{ backgroundColor: "var(--color-tab-bar-background)" }}
         >
-          <TextInput
-            flex={1}
-            radius={0}
-            value={command}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (val && !val.startsWith(commandChar)) {
-                setCommand(commandChar + val);
-              } else {
-                setCommand(val);
+          {connected && (
+            <Group gap={4} wrap="wrap">
+              {commandButtons
+                .filter((b) => {
+                  if (b.guestOnly && signedIn) return false;
+                  if (b.auth && !signedIn) return false;
+                  return true;
+                })
+                .map((b) => (
+                  <Button
+                    key={b.cmd}
+                    size="xs"
+                    variant="light"
+                    radius="xl"
+                    tt="uppercase"
+                    onClick={() => handleCommandClick(b.cmd, b.cursorEnd)}
+                  >
+                    {b.label}
+                  </Button>
+                ))}
+            </Group>
+          )}
+          <Group w="100%">
+            <TextInput
+              flex={1}
+              radius={0}
+              ref={inputRef}
+              value={command}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val && !val.startsWith(commandChar)) {
+                  setCommand(commandChar + val);
+                } else {
+                  setCommand(val);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSendCommand();
+              }}
+              disabled={!connected}
+              styles={{ input: { fontFamily: "JetBrains Mono" } }}
+              placeholder={
+                connected
+                  ? "Execute command or send message..."
+                  : "Command input locked until server starts..."
               }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleSendCommand();
-            }}
-            disabled={!connected}
-            styles={{ input: { fontFamily: "JetBrains Mono" } }}
-            placeholder={
-              connected
-                ? "Execute command or send message..."
-                : "Command input locked until server starts..."
-            }
-          />
-          <ActionIcon
-            disabled={!connected}
-            radius={0}
-            c="black"
-            onClick={handleSendCommand}
-          >
-            <BiSend />
-          </ActionIcon>
-        </Group>
+            />
+            <ActionIcon
+              disabled={!connected}
+              radius={0}
+              c="black"
+              onClick={handleSendCommand}
+            >
+              <BiSend />
+            </ActionIcon>
+          </Group>
+        </Stack>
       </Chatbox>
       <ToastContainer />
     </Stack>

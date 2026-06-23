@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { parseChatMessage } from "../types";
 import styles from "./Chatbox.module.css";
-import { Stack, Box, Text, ScrollArea } from "@mantine/core";
+import { Stack, Box, Text, ScrollArea, Badge, Group } from "@mantine/core";
 
 type Props = {
   messages: string[];
@@ -30,15 +30,24 @@ export default function Chatbox({ messages, children }: Props) {
                 c={parsed.isSystem ? "dimmed" : ""}
                 ff="monospace"
               >
-                <Text component="span" className={styles.timestamp}>
-                  {parsed.timestamp}
-                </Text>{" "}
-                <Text component="span" className={styles.sender}>
-                  {parsed.isSystem ? "System" : parsed.sender}:
-                </Text>{" "}
-                <Text component="span" className={styles.text}>
-                  {parsed.text}
-                </Text>
+                <Group align="flex-start" c={parsed.isSystem ? "dimmed" : ""}>
+                  <Text component="span" className={styles.timestamp}>
+                    {parsed.timestamp}
+                  </Text>{" "}
+                  <Stack gap={2}>
+                    <Badge
+                      className={parsed.isSystem ? styles.systemBadge : ""}
+                      variant={parsed.isSystem ? "transparent" : "default"}
+                      radius={4}
+                      c={parsed.isSystem ? "dimmed" : ""}
+                    >
+                      {parsed.isSystem ? "System" : parsed.sender}
+                    </Badge>{" "}
+                    <Text component="span" className={styles.text}>
+                      {parsed.text}
+                    </Text>
+                  </Stack>
+                </Group>
               </Text>
             );
           })}

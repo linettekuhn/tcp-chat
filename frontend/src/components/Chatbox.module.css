@@ -24,3 +24,7 @@
 .text {
   white-space: pre-wrap;
 }
+
+.systemBadge {
+  padding: 0;
+}

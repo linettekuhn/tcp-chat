@@ -29,7 +29,12 @@ export function parseChatMessage(raw: string): ChatMessage | null {
   const id = `${Date.now()}-${++idCounter}`;
 
   if (raw.startsWith("(SERVER)")) {
-    return { id, text: raw.replace("(SERVER) ", ""), timestamp, isSystem: true };
+    return {
+      id,
+      text: raw.replace("(SERVER) ", ""),
+      timestamp,
+      isSystem: true,
+    };
   }
 
   const idx = raw.indexOf(": ");
