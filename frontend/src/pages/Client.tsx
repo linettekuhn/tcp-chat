@@ -9,6 +9,8 @@ import {
   NumberInput,
   Badge,
   ActionIcon,
+  Modal,
+  PasswordInput,
 } from "@mantine/core";
 import { startClient, stopClient, sendCommand } from "../api/tcpClient";
 import { BASEURL } from "../api/config";
@@ -27,6 +29,11 @@ function Client() {
   const [connected, setConnected] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [username, setUsername] = useState("");
+  const [authModalMode, setAuthModalMode] = useState<
+    "register" | "login" | null
+  >(null);
+  const [authUsername, setAuthUsername] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
   const pendingUsernameRef = useRef("");
   const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -173,6 +180,12 @@ function Client() {
   ];
 
   const handleCommandClick = (cmd: string, cursorEnd?: boolean) => {
+    if (cmd === "register" || cmd === "login") {
+      setAuthUsername("");
+      setAuthPassword("");
+      setAuthModalMode(cmd);
+      return;
+    }
     const full = commandChar + cmd;
     setCommand(full);
     inputRef.current?.focus();
@@ -183,6 +196,15 @@ function Client() {
         inputRef.current?.setSelectionRange(pos, pos);
       }, 0);
     }
+  };
+
+  const handleAuthSubmit = () => {
+    if (!authModalMode || !authUsername.trim() || !authPassword.trim()) return;
+    const full = `${commandChar}${authModalMode} ${authUsername.trim()} ${authPassword.trim()}`;
+    setCommand(full);
+    setAuthModalMode(null);
+    pendingUsernameRef.current = authUsername.trim();
+    setTimeout(() => inputRef.current?.focus(), 0);
   };
 
   const closeMessageStream = () => {
@@ -385,6 +407,49 @@ function Client() {
           </Group>
         </Stack>
       </Chatbox>
+      <Modal
+        opened={authModalMode !== null}
+        onClose={() => setAuthModalMode(null)}
+        title={
+          authModalMode === "register"
+            ? "Create register command"
+            : "Create log in command"
+        }
+        tt="capitalize"
+        styles={{ title: { fontWeight: 900 } }}
+        centered
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleAuthSubmit();
+          }}
+        >
+          <Stack gap="sm">
+            <TextInput
+              label="Username"
+              value={authUsername}
+              onChange={(e) => setAuthUsername(e.currentTarget.value)}
+              autoFocus
+              required
+            />
+            <PasswordInput
+              label="Password"
+              value={authPassword}
+              onChange={(e) => setAuthPassword(e.currentTarget.value)}
+              required
+            />
+            <Group justify="flex-end" mt="md">
+              <Button variant="default" onClick={() => setAuthModalMode(null)}>
+                Cancel
+              </Button>
+              <Button variant="light" type="submit">
+                Create
+              </Button>
+            </Group>
+          </Stack>
+        </form>
+      </Modal>
       <ToastContainer />
     </Stack>
   );
