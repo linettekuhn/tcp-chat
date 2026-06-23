@@ -55,7 +55,6 @@ function Server() {
   const [activeUsers, setActiveUsers] = useState<string[]>([]);
   const [inactiveUsers, setInactiveUsers] = useState<string[]>([]);
   const [chatMessages, setChatMessages] = useState<string[]>([]);
-  const eventSourceRef = useRef<EventSource | null>(null);
   const collectingRef = useRef<{
     list: "active" | "registered" | null;
     usernames: string[];
@@ -105,54 +104,83 @@ function Server() {
       collectingRef.current = { list: null, usernames: [] };
     };
 
-    // open SSE connection to /server/output-admin
-    const eventSource = new EventSource(`${BASEURL}/server/output-admin`);
-    eventSourceRef.current = eventSource;
+    const abortController = new AbortController();
 
-    // parse incoming data
-    eventSource.onmessage = (event) => {
-      for (const data of event.data.split("\n")) {
-        setChatMessages((prev) => [...prev, data]);
-        if (data === "(SERVER) Logged in users:") {
-          finalizeCollection(); // flush any prior incomplete collection
-          // start collecting active usernames (logged in)
-          collectingRef.current = { list: "active", usernames: [] };
-        } else if (data === "(SERVER) No users logged in") {
-          finalizeCollection();
-          setActiveUsers([]);
-          activeUsersRef.current = [];
-        } else if (data === "(SERVER) Registered users:") {
-          finalizeCollection();
-          // start collecting registered usernames
-          collectingRef.current = { list: "registered", usernames: [] };
-        } else if (data === "(SERVER) No users registered") {
-          finalizeCollection();
-          registeredUsersRef.current = [];
-          setInactiveUsers([]);
-        } else if (data.startsWith("(SERVER)")) {
-          // other admin messages. terminate any collection thats in progress
-          finalizeCollection();
-        } else if (collectingRef.current.list && data.trim()) {
-          if (!data.includes(": ")) {
-            // username list don't include : like broadcast messages
-            collectingRef.current.usernames.push(data.trim());
-          } else {
-            finalizeCollection();
+    const connect = async () => {
+      try {
+        const response = await fetch(`${BASEURL}/server/output-admin`, {
+          signal: abortController.signal,
+          headers: { Accept: "text/event-stream" },
+        });
+
+        if (!response.ok) {
+          throw new Error(`SSE error: ${response.status}`);
+        }
+        if (!response.body) {
+          throw new Error("SSE response body is null");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop() || "";
+
+          for (const part of parts) {
+            const dataLines: string[] = [];
+            for (const line of part.split("\n")) {
+              if (line.startsWith("data: ")) {
+                dataLines.push(line.slice(6));
+              }
+            }
+            const eventData = dataLines.join("\n");
+
+            for (const data of eventData.split("\n")) {
+              setChatMessages((prev) => [...prev, data]);
+              if (data === "(SERVER) Logged in users:") {
+                finalizeCollection();
+                collectingRef.current = { list: "active", usernames: [] };
+              } else if (data === "(SERVER) No users logged in") {
+                finalizeCollection();
+                setActiveUsers([]);
+                activeUsersRef.current = [];
+              } else if (data === "(SERVER) Registered users:") {
+                finalizeCollection();
+                collectingRef.current = { list: "registered", usernames: [] };
+              } else if (data === "(SERVER) No users registered") {
+                finalizeCollection();
+                registeredUsersRef.current = [];
+                setInactiveUsers([]);
+              } else if (data.startsWith("(SERVER)")) {
+                finalizeCollection();
+              } else if (collectingRef.current.list && data.trim()) {
+                if (!data.includes(": ")) {
+                  collectingRef.current.usernames.push(data.trim());
+                } else {
+                  finalizeCollection();
+                }
+              }
+            }
           }
+        }
+      } catch (err) {
+        if (err instanceof Error && err.name !== "AbortError") {
+          console.error("SSE error:", err);
         }
       }
     };
 
-    eventSource.onerror = (error) => {
-      console.error("SSE Error:", error);
-      eventSource.close();
-      eventSourceRef.current = null;
-    };
+    connect();
 
     return () => {
       finalizeCollection();
-      eventSource.close();
-      eventSourceRef.current = null;
+      abortController.abort();
       setActiveUsers([]);
       setInactiveUsers([]);
       setChatMessages([]);
@@ -212,10 +240,6 @@ function Server() {
   const handleServerStop = async () => {
     setLoading(true);
     // tear down frontend state immediately so polling and SSE stop
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
     setActive(false);
 
     // then shut down the backend

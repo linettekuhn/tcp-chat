@@ -131,15 +131,14 @@ bool ChatServer::handleClients()
         std::string commandName = msgHandler.GetCommandName();
         if (commandName == "help") {
             response = "(SERVER) Available commands:\n" +
-                std::string(1, _commandChar) + "help: list all cmds\n" +
+                std::string(1, _commandChar) + "help: list cmds\n" +
                 std::string(1, _commandChar) + "register <user> <pass>: create account\n" +
                 std::string(1, _commandChar) + "login <user> <pass>: log in\n" +
                 std::string(1, _commandChar) + "logout*: log out\n" +
                 std::string(1, _commandChar) + "send* [<user>] \"msg\": send msg\n" +
                 std::string(1, _commandChar) + "getlist*: online users\n" +
-                std::string(1, _commandChar) + "getregistered*: registered users\n" +
                 std::string(1, _commandChar) + "getchatlog*: chat history\n" +
-                std::string(1, _commandChar) + "getcmdlog*: command history ";
+                std::string(1, _commandChar) + "getcmdlog*: cmd history";
             sendMessage(s, response.c_str(), static_cast<int32_t>(response.size() + 1));
         }
         else if (commandName == "shutdown")

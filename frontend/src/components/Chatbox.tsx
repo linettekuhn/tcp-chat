@@ -16,37 +16,38 @@ export default function Chatbox({ messages, children }: Props) {
   }, [messages]);
 
   return (
-    <Stack gap={0} p={16} flex={1} h="100%" w="100%" justify="flex-start">
-      <ScrollArea flex={1} className={styles.messages}>
-        <Stack gap={4}>
-          {messages.map((raw) => {
-            const parsed = parseChatMessage(raw);
-            if (!parsed) return null;
-
-            return (
-              <Text
-                key={parsed.id}
-                component="p"
-                fs={parsed.isSystem ? "italic" : ""}
-                c={parsed.isSystem ? "dimmed" : ""}
-                ff="monospace"
-              >
-                <Text component="span" className={styles.timestamp}>
-                  {parsed.timestamp}
-                </Text>{" "}
-                <Text component="span" className={styles.sender}>
-                  {parsed.isSystem ? "System" : parsed.sender}:
-                </Text>{" "}
-                <Text component="span" className={styles.text}>
-                  {parsed.text}
+    <Stack h="100%" w="100%" flex={1}>
+      <Stack gap={0} p={16} flex={1} h="100%" w="100%" justify="flex-start">
+        <ScrollArea flex={1} className={styles.messages}>
+          <Stack gap={4}>
+            {messages.map((raw) => {
+              const parsed = parseChatMessage(raw);
+              if (!parsed) return null;
+              return (
+                <Text
+                  key={parsed.id}
+                  component="p"
+                  fs={parsed.isSystem ? "italic" : ""}
+                  c={parsed.isSystem ? "dimmed" : ""}
+                  ff="monospace"
+                >
+                  <Text component="span" className={styles.timestamp}>
+                    {parsed.timestamp}
+                  </Text>{" "}
+                  <Text component="span" className={styles.sender}>
+                    {parsed.isSystem ? "System" : parsed.sender}:
+                  </Text>{" "}
+                  <Text component="span" className={styles.text}>
+                    {parsed.text}
+                  </Text>
                 </Text>
-              </Text>
-            );
-          })}
-          <Box ref={endRef} />
-        </Stack>
-      </ScrollArea>
-      {children}
+              );
+            })}
+            <Box ref={endRef} />
+          </Stack>
+        </ScrollArea>
+      </Stack>
+      <Box style={{ flexShrink: 0 }}>{children}</Box>
     </Stack>
   );
 }

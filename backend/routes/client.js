@@ -53,12 +53,15 @@ router.post("/start", (req, res) => {
     errorHandler(data.toString(), "Client Error")
   );
 
-  // output stream
-  client.stdout.once("data", (data) => {
-    if (!responded) {
-      const output = data.toString().replace(/\0/g, "").trim();
-      cmdChar = output.charAt(output.length - 1);
-
+  // output stream — buffer data and look for welcome message to extract cmdChar
+  let stdoutBuffer = "";
+  client.stdout.on("data", (data) => {
+    const text = data.toString().replace(/\0/g, "");
+    console.log(`[CLIENT stdout] ${text.trim()}`);
+    stdoutBuffer += text;
+    const welcomeMatch = stdoutBuffer.match(/begin them with: (.)/);
+    if (welcomeMatch && !responded) {
+      cmdChar = welcomeMatch[1];
       console.log(`Command char: ${cmdChar}`);
       res.status(200).send(`Client connected. Command character: ${cmdChar}`);
       responded = true;
@@ -83,6 +86,7 @@ router.post("/command", (req, res) => {
   }
 
   let { command } = req.body;
+  console.log("COMMAND received:", command);
   if (!command) {
     return res.status(400).send("Missing command in request");
   }
@@ -98,13 +102,20 @@ router.post("/command", (req, res) => {
     }
   };
 
-  // temp handler for command errors
+  // handler for stderr output
   const cmdErrorHandler = (data) => {
-    errorHandler(data.toString());
-    // remove handler after error
-    client.stderr.off("data", cmdErrorHandler);
+    const msg = data.toString();
+    if (msg.startsWith("[CLIENT]")) {
+      console.log("CLIENT DEBUG:", msg);
+      return; // debug logs are not errors
+    }
+    errorHandler(msg);
   };
-  client.stderr.once("data", cmdErrorHandler);
+  client.stderr.on("data", cmdErrorHandler);
+
+  // clean up listener when request completes
+  const cleanup = () => client.stderr.off("data", cmdErrorHandler);
+  res.on("close", cleanup);
 
   try {
     // input command
@@ -112,8 +123,10 @@ router.post("/command", (req, res) => {
       if (error) {
         errorHandler(`Failed to write to stdin: ${error.message}`);
       } else if (!responded) {
+        console.log("COMMAND written to stdin successfully");
         res.status(200).send("Command sent");
       }
+      cleanup();
     });
   } catch (error) {
     errorHandler(`Error caught writing to stdin stream: ${error.message}`);

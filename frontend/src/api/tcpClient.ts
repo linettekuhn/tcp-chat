@@ -31,16 +31,25 @@ export async function startClient(port: number, serverAddress: string) {
 }
 
 export async function sendCommand(command: string) {
-  const response = await handleResponse(
-    await fetch(`${BASEURL}/client/command`, {
+  const url = `${BASEURL}/client/command`;
+  console.log("FETCHING:", url, command);
+  let response: Response;
+  try {
+    response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ command }),
-    })
-  );
-  const msg = await response.text();
+    });
+  } catch (err) {
+    console.error("FETCH failed:", err);
+    throw err;
+  }
+  console.log("RESPONSE status:", response.status);
+  const handled = await handleResponse(response);
+  const msg = await handled.text();
+  console.log("RESPONSE body:", msg);
   return msg;
 }
 

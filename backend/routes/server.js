@@ -81,7 +81,12 @@ router.post("/start", async (req, res) => {
     }
   });
 
-  // output stream
+  // log all server stdout
+  server.stdout.on("data", (data) => {
+    console.log(`[SERVER stdout] ${data.toString().replace(/\0/g, "").trim()}`);
+  });
+
+  // output stream (first data = startup response)
   server.stdout.once("data", (data) => {
     if (!responded) {
       responded = true;
@@ -248,12 +253,15 @@ router.post("/start-admin", (req, res) => {
     errorHandler(data.toString(), "Admin client Error"),
   );
 
-  // output stream
-  admin.stdout.once("data", (data) => {
-    if (!responded) {
-      const output = data.toString().replace(/\0/g, "").trim();
-      cmdChar = output.charAt(output.length - 1);
-
+  // output stream — buffer data and look for welcome message to extract cmdChar
+  let stdoutBuffer = "";
+  admin.stdout.on("data", (data) => {
+    const text = data.toString().replace(/\0/g, "");
+    console.log(`[ADMIN stdout] ${text.trim()}`);
+    stdoutBuffer += text;
+    const welcomeMatch = stdoutBuffer.match(/begin them with: (.)/);
+    if (welcomeMatch && !responded) {
+      cmdChar = welcomeMatch[1];
       console.log(`Command char: ${cmdChar}`);
       res
         .status(200)
@@ -294,13 +302,20 @@ router.post("/command-admin", (req, res) => {
     }
   };
 
-  // temp handler for command errors
+  // handler for stderr output
   const cmdErrorHandler = (data) => {
-    errorHandler(data.toString());
-    // remove handler after error
-    admin.stderr.off("data", cmdErrorHandler);
+    const msg = data.toString();
+    if (msg.startsWith("[CLIENT]")) {
+      console.log("CLIENT DEBUG:", msg);
+      return; // debug logs are not errors
+    }
+    errorHandler(msg);
   };
-  admin.stderr.once("data", cmdErrorHandler);
+  admin.stderr.on("data", cmdErrorHandler);
+
+  // clean up listener when request completes
+  const cleanup = () => admin.stderr.off("data", cmdErrorHandler);
+  res.on("close", cleanup);
 
   try {
     // input command
@@ -318,6 +333,7 @@ router.post("/command-admin", (req, res) => {
       } else if (!responded) {
         res.status(200).send("Command sent");
       }
+      cleanup();
     });
   } catch (error) {
     errorHandler(`Error caught writing to stdin stream: ${error.message}`);
