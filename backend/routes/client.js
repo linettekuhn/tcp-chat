@@ -28,6 +28,7 @@ router.post("/start", (req, res) => {
   // spawn process in client mode
   // TCPChatServer.exe 0 <port> <ip>
   client = spawn(serverPath, ["1", String(port), serverAddress]);
+  console.log(`[CLIENT PID] ${client.pid}`);
 
   let responded = false;
 
@@ -213,6 +214,7 @@ router.post("/stop", (req, res) => {
 
       setTimeout(() => {
         if (client) {
+          console.log(`[CLIENT PID] killing ${client.pid}`);
           client.kill();
           client = null;
           cmdChar = null;

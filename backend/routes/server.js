@@ -61,6 +61,7 @@ router.post("/start", async (req, res) => {
   ]);
 
   serverProcess = server;
+  console.log(`[SERVER PID] ${server.pid}`);
 
   let responded = false;
 
@@ -228,6 +229,7 @@ router.post("/start-admin", (req, res) => {
   // spawn process in client mode
   // TCPChatServer.exe 0 <port> <ip>
   admin = spawn(serverPath, ["1", String(port), serverAddress]);
+  console.log(`[ADMIN PID] ${admin.pid}`);
 
   let responded = false;
 

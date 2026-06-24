@@ -128,6 +128,7 @@ int main(int argc, char* argv[])
 		if (server.init(port, commandChar, capacity) == SUCCESS)
 		{
 			active = true;
+			signal(SIGPIPE, SIG_IGN);
 			std::cout << "Server initalized!" << std::endl;
 			std::cout << Utilities::GetHostInfo(port) << std::endl;
 
@@ -135,12 +136,12 @@ int main(int argc, char* argv[])
 			std::thread udpThread = std::thread(UDPThreadEntrypoint, &perThreadData, &server);
 			udpThread.detach();
 
-			bool running = true;
+            bool running = true;
 
-			// server run loop
-			while (running)
-			{
-				server.selectReadySockets();
+            // server run loop
+            while (running)
+            {
+                server.selectReadySockets();
 				server.acceptConnection();
 				running = server.handleClients();
 
@@ -180,7 +181,11 @@ int main(int argc, char* argv[])
 			{
 				// command input
 				std::string command;
-				if (!std::getline(std::cin, command)) break;
+				if (!std::getline(std::cin, command))
+				{
+					std::cout << "[DEBUG-EXIT] EOF on stdin" << std::endl;
+					break;
+				}
 
 				// command validation
 				MessageHandler msgHandler(command, client.getCommandChar());
@@ -192,6 +197,7 @@ int main(int argc, char* argv[])
 				std::string disconnectCmd = std::string(1, client.getCommandChar()) + "disconnect";
 				if (command == disconnectCmd)
 				{
+					std::cout << "[DEBUG-EXIT] disconnect command" << std::endl;
 					client.sendMessage(*(client.getSocket()), disconnectCmd.c_str(), static_cast<int32_t>(disconnectCmd.size() + 1));
 					break;
 				}
@@ -203,6 +209,7 @@ int main(int argc, char* argv[])
 				std::string response = client.handleServer();
 				if (response == "ERROR")
 				{
+					std::cout << "[DEBUG-EXIT] connection lost" << std::endl;
 					std::cerr << "(SERVER) Connection with server lost!" << std::endl;
 					break;
 				}

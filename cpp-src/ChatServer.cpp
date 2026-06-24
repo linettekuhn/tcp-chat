@@ -241,10 +241,7 @@ bool ChatServer::handleClients()
                         std::string username = iter->first;
                         SOCKET socket = iter->second;
 
-                        if (FD_ISSET(socket, &_writeSet))
-                        {
-                            sendMessage(socket, formattedMessage.c_str(), static_cast<int32_t>(formattedMessage.size() + 1));
-                        }
+                        sendMessage(socket, formattedMessage.c_str(), static_cast<int32_t>(formattedMessage.size() + 1));
                     }
                 }
             }
@@ -265,6 +262,7 @@ bool ChatServer::handleClients()
                 FD_CLR(s, &_masterSet);
                 FD_CLR(s, &_readSet);
                 FD_CLR(s, &_writeSet);
+                toRemove.push_back(s);
             }
             else if (commandName == "getlist") {
                 std::string response;
@@ -399,7 +397,7 @@ int ChatServer::sendMessage(SOCKET socket, const char* data, int32_t length)
 int ChatServer::selectReadySockets()
 {
     _readSet = _masterSet;
-    _writeSet = _masterSet;
+    FD_ZERO(&_writeSet);
 
     timeval timeout;
     timeout.tv_sec = 0;
@@ -412,7 +410,7 @@ int ChatServer::selectReadySockets()
 			highest_fd = s;
         }
     }
-    int result = select(highest_fd + 1, &_readSet, &_writeSet, NULL, &timeout);
+    int result = select(highest_fd + 1, &_readSet, NULL, NULL, &timeout);
     if (result < 0)
     {
         return SELECT_ERROR;
