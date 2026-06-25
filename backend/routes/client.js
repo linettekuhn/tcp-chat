@@ -3,12 +3,13 @@ const router = express.Router();
 const { spawn } = require("child_process");
 const path = require("path");
 const serverPath = path.join(__dirname, "../bin/TCPChatServer");
+const shared = require("../shared-state");
 
 let client = null;
 let cmdChar = null;
 
-process.on("SIGTERM", () => { if (client) { client.kill(); client = null; cmdChar = null; } });
-process.on("SIGINT", () => { if (client) { client.kill(); client = null; cmdChar = null; } });
+process.on("SIGTERM", () => { if (client) { client.kill(); shared.clientProcess = null; client = null; cmdChar = null; } });
+process.on("SIGINT", () => { if (client) { client.kill(); shared.clientProcess = null; client = null; cmdChar = null; } });
 
 router.post("/start", (req, res) => {
   if (client) {
@@ -16,6 +17,7 @@ router.post("/start", (req, res) => {
       return res.status(400).send("Client already running");
     }
     // orphaned reference — clean up
+    shared.clientProcess = null;
     client = null;
     cmdChar = null;
   }
@@ -28,6 +30,7 @@ router.post("/start", (req, res) => {
   // spawn process in client mode
   // TCPChatServer.exe 0 <port> <ip>
   client = spawn(serverPath, ["1", String(port), serverAddress]);
+  shared.clientProcess = client;
   console.log(`[CLIENT PID] ${client.pid}`);
 
   let responded = false;
@@ -41,6 +44,7 @@ router.post("/start", (req, res) => {
       // cleanup client if error happens at startup
       if (client) {
         client.kill();
+        shared.clientProcess = null;
         client = null;
         cmdChar = null;
       }
@@ -71,6 +75,7 @@ router.post("/start", (req, res) => {
 
   // clean up reference when process exits
   client.once("exit", (code) => {
+    shared.clientProcess = null;
     client = null;
     cmdChar = null;
     if (!responded) {
@@ -216,6 +221,7 @@ router.post("/stop", (req, res) => {
         if (client) {
           console.log(`[CLIENT PID] killing ${client.pid}`);
           client.kill();
+          shared.clientProcess = null;
           client = null;
           cmdChar = null;
           res.status(200).send("Client disconnected");
@@ -233,6 +239,7 @@ router.post("/stop", (req, res) => {
   client.once("exit", (code) => {
     if (!responded) {
       console.log(`Process exited with code ${code}`);
+      shared.clientProcess = null;
       client = null;
       cmdChar = null;
       res.status(200).send("Client disconnected");
@@ -252,6 +259,7 @@ router.post("/stop", (req, res) => {
     } else {
       if (!responded) {
         client.kill();
+        shared.clientProcess = null;
         client = null;
         cmdChar = null;
         res.status(200).send("Client disconnected");

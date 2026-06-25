@@ -87,6 +87,7 @@ function Client() {
     abortRef.current = abortController;
 
     const connect = async () => {
+      let disconnectedIntentionally = false;
       try {
         const response = await fetch(`${BASEURL}/client/output`, {
           signal: abortController.signal,
@@ -141,11 +142,21 @@ function Client() {
           }
         }
       } catch (err) {
-        if (err instanceof Error && err.name !== "AbortError") {
+        if (err instanceof Error && err.name === "AbortError") {
+          disconnectedIntentionally = true;
+        } else {
           console.error("SSE error:", err);
         }
+      } finally {
         if (abortRef.current === abortController) {
           abortRef.current = null;
+        }
+        if (!disconnectedIntentionally) {
+          setConnected(false);
+          setSignedIn(false);
+          setUsername("");
+          setMessages([]);
+          toast.warning("Disconnected from server");
         }
       }
     };
@@ -266,6 +277,25 @@ function Client() {
       }
     };
   }, []);
+
+  const prevIsActiveRef = useRef(isActive);
+
+  useEffect(() => {
+    const wasActive = prevIsActiveRef.current;
+    prevIsActiveRef.current = isActive;
+
+    if (wasActive && !isActive) {
+      setDrawerOpened(false);
+      if (connected) {
+        closeMessageStream();
+        setConnected(false);
+        setSignedIn(false);
+        setUsername("");
+        setMessages([]);
+        toast.warning("Disconnected from server");
+      }
+    }
+  }, [isActive, connected]);
 
   return (
     <Stack w="100%" h="100%" gap={0} style={{ overflow: "hidden" }}>

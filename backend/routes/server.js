@@ -4,6 +4,7 @@ const { spawn } = require("child_process");
 const path = require("path");
 const serverPath = path.join(__dirname, "../bin/TCPChatServer");
 const os = require("os");
+const shared = require("../shared-state");
 
 let cmdChar = null;
 let admin = null;
@@ -124,6 +125,10 @@ router.post("/stop", (req, res) => {
       responded = true;
       cmdChar = null;
       serverProcess = null;
+      if (shared.clientProcess) {
+        shared.clientProcess.kill("SIGTERM");
+        shared.clientProcess = null;
+      }
       res.status(200).send("Server was shutdown");
     }
   };
