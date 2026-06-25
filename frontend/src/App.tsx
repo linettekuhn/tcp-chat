@@ -7,6 +7,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { IoSunny, IoMoon } from "react-icons/io5";
+import { ServerProvider } from "./context/ServerContext";
 import Server from "./pages/Server";
 import Client from "./pages/Client";
 import { ImTerminal } from "react-icons/im";
@@ -50,64 +51,66 @@ function App() {
           </ActionIcon>
         </Tooltip>
       </Group>
-      <Tabs
-        defaultValue="start_server"
-        keepMountedMode="display-none"
-        classNames={{ tab: styles.tab }}
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          flex: 1,
-          overflow: "hidden",
-        }}
-      >
-        <Tabs.List
+      <ServerProvider>
+        <Tabs
+          defaultValue="start_server"
+          keepMountedMode="display-none"
+          classNames={{ tab: styles.tab }}
           style={{
-            borderBottom: "1px solid var(--mantine-color-default-border)",
-            background: "var(--color-tab-bar-background)",
+            display: "flex",
+            flexDirection: "column",
+            flex: 1,
+            overflow: "hidden",
           }}
         >
-          <Tabs.Tab
-            value="start_server"
-            style={{ borderRadius: 0 }}
-            leftSection={<LuRadio size="1.2em" />}
+          <Tabs.List
+            style={{
+              borderBottom: "1px solid var(--mantine-color-default-border)",
+              background: "var(--color-tab-bar-background)",
+            }}
           >
-            <Text size="sm" tt="uppercase" fw={600}>
-              start_server
-            </Text>
-          </Tabs.Tab>
+            <Tabs.Tab
+              value="start_server"
+              style={{ borderRadius: 0 }}
+              leftSection={<LuRadio size="1.2em" />}
+            >
+              <Text size="sm" tt="uppercase" fw={600}>
+                start_server
+              </Text>
+            </Tabs.Tab>
 
-          <Tabs.Tab
-            value="join_server"
-            style={{ borderRadius: 0 }}
-            leftSection={<LuLogIn size="1.2em" />}
+            <Tabs.Tab
+              value="join_server"
+              style={{ borderRadius: 0 }}
+              leftSection={<LuLogIn size="1.2em" />}
+            >
+              <Text size="sm" tt="uppercase" fw={600}>
+                join_server
+              </Text>
+            </Tabs.Tab>
+          </Tabs.List>
+          <Tabs.Panel
+            value="start_server"
+            style={{
+              flex: 1,
+              overflow: "hidden",
+              background: "var(--color-background)",
+            }}
           >
-            <Text size="sm" tt="uppercase" fw={600}>
-              join_server
-            </Text>
-          </Tabs.Tab>
-        </Tabs.List>
-        <Tabs.Panel
-          value="start_server"
-          style={{
-            flex: 1,
-            overflow: "hidden",
-            background: "var(--color-background)",
-          }}
-        >
-          <Server />
-        </Tabs.Panel>
-        <Tabs.Panel
-          value="join_server"
-          style={{
-            flex: 1,
-            overflow: "hidden",
-            background: "var(--color-background)",
-          }}
-        >
-          <Client />
-        </Tabs.Panel>
-      </Tabs>
+            <Server />
+          </Tabs.Panel>
+          <Tabs.Panel
+            value="join_server"
+            style={{
+              flex: 1,
+              overflow: "hidden",
+              background: "var(--color-background)",
+            }}
+          >
+            <Client />
+          </Tabs.Panel>
+        </Tabs>
+      </ServerProvider>
     </div>
   );
 }

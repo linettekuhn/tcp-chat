@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ComponentType } from "react";
+import { useEffect, useRef, type ComponentType } from "react";
 import {
   Text,
   TextInput,
@@ -10,7 +10,7 @@ import {
   Divider,
   Badge,
 } from "@mantine/core";
-import { startServer, stopServer, getHostIP } from "../api/tcpServer";
+import { startServer, getHostIP } from "../api/tcpServer";
 import { BASEURL } from "../api/config";
 import { sendAdminCommand, startAdminClient } from "../api/tcpServer";
 import Chatbox from "../components/Chatbox";
@@ -22,6 +22,7 @@ import {
 } from "react-icons/md";
 import { BiServer } from "react-icons/bi";
 import CustomCopyButton from "../components/CustomCopyButton";
+import { useServerContext } from "../context/ServerContext";
 
 function HeadingText({
   text,
@@ -45,15 +46,21 @@ function HeadingText({
 }
 
 function Server() {
-  const [port, setPort] = useState(31337);
-  const [capacity, setCapacity] = useState(10);
-  const [commandChar, setCmdChar] = useState("~");
-  const [serverAddress, setServerAddress] = useState("");
-  const [isActive, setActive] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [activeUsers, setActiveUsers] = useState<string[]>([]);
-  const [inactiveUsers, setInactiveUsers] = useState<string[]>([]);
-  const [chatMessages, setChatMessages] = useState<string[]>([]);
+  const {
+    port, setPort,
+    capacity, setCapacity,
+    commandChar, setCmdChar,
+    serverAddress, setServerAddress,
+    isActive, setActive,
+    loading, setLoading,
+    activeUsers,
+    inactiveUsers,
+    chatMessages, setChatMessages,
+    setActiveUsers,
+    setInactiveUsers,
+    handleServerStop,
+  } = useServerContext();
+
   const collectingRef = useRef<{
     list: "active" | "registered" | null;
     usernames: string[];
@@ -75,7 +82,7 @@ function Server() {
     };
 
     fetchIP();
-  }, []);
+  }, [setServerAddress]);
 
   useEffect(() => {
     if (!isActive) {
@@ -187,7 +194,7 @@ function Server() {
       registeredUsersRef.current = [];
       collectingRef.current = { list: null, usernames: [] };
     };
-  }, [isActive]);
+  }, [isActive, setActiveUsers, setChatMessages, setInactiveUsers]);
 
   useEffect(() => {
     if (!isActive) return;
@@ -234,17 +241,6 @@ function Server() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleServerStop = async () => {
-    setLoading(true);
-    // tear down frontend state immediately so polling and SSE stop
-    setActive(false);
-
-    // then shut down the backend
-    await stopServer(port, serverAddress).catch(() => {});
-    toast.success("Server stopped!");
-    setLoading(false);
   };
 
   return (

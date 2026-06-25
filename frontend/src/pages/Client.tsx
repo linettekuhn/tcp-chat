@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import {
   Text,
   TextInput,
@@ -11,16 +11,58 @@ import {
   ActionIcon,
   Modal,
   PasswordInput,
+  Drawer,
+  Divider,
 } from "@mantine/core";
 import { startClient, stopClient, sendCommand } from "../api/tcpClient";
 import { BASEURL } from "../api/config";
 import Chatbox from "../components/Chatbox";
 import { toast, ToastContainer } from "react-toastify";
-import { MdHelpOutline } from "react-icons/md";
+import {
+  MdHelpOutline,
+  MdOutlinePeopleAlt,
+  MdOutlineTerminal,
+} from "react-icons/md";
+import { BiServer, BiSend } from "react-icons/bi";
+import CustomCopyButton from "../components/CustomCopyButton";
 import CustomPasteButton from "../components/CustomPasteButton";
-import { BiSend } from "react-icons/bi";
+import { useServerContext } from "../context/ServerContext";
+
+function HeadingText({
+  text,
+  IconComponent,
+}: {
+  text: string;
+  IconComponent: ComponentType<object>;
+}) {
+  return (
+    <Group
+      justify="flex-start"
+      gap={8}
+      style={{ color: "var(--mantine-primary-color-filled)" }}
+    >
+      <IconComponent />
+      <Text size="sm" tt="uppercase" fw={600}>
+        {text}
+      </Text>
+    </Group>
+  );
+}
 
 function Client() {
+  const {
+    isActive,
+    port: serverPort,
+    capacity,
+    commandChar: serverCmdChar,
+    serverAddress: serverIP,
+    activeUsers,
+    inactiveUsers,
+    loading,
+    handleServerStop,
+  } = useServerContext();
+
+  const [drawerOpened, setDrawerOpened] = useState(false);
   const [port, setPort] = useState(31337);
   const [serverAddress, setServerAddress] = useState("");
   const [command, setCommand] = useState("");
@@ -317,15 +359,29 @@ function Client() {
                 ? `Signed in as ${username}`
                 : "You're not signed in yet"}{" "}
             </Badge>
-            <Button
-              onClick={handleClientStop}
-              tt="uppercase"
-              color="red.4"
-              c="black"
-              radius={0}
-            >
-              STOP_CLIENT
-            </Button>
+            <Group gap="xs">
+              {isActive && (
+                <Button
+                  onClick={() => setDrawerOpened(true)}
+                  tt="uppercase"
+                  variant="light"
+                  radius={0}
+                  size="xs"
+                  leftSection={<BiServer />}
+                >
+                  SERVER
+                </Button>
+              )}
+              <Button
+                onClick={handleClientStop}
+                tt="uppercase"
+                color="red.4"
+                c="black"
+                radius={0}
+              >
+                STOP_CLIENT
+              </Button>
+            </Group>
           </Group>
         )}
       </Stack>
@@ -453,6 +509,129 @@ function Client() {
           </Stack>
         </form>
       </Modal>
+      <Drawer
+        opened={drawerOpened}
+        onClose={() => setDrawerOpened(false)}
+        title="ADMIN PANEL"
+        padding="md"
+        position="right"
+        styles={{ title: { fontWeight: 900 } }}
+      >
+        <Stack gap="lg">
+          <Stack>
+            <HeadingText
+              text="server_configuration"
+              IconComponent={MdOutlineTerminal}
+            />
+            <Stack gap={8}>
+              <Group justify="space-between">
+                <Text c="dimmed" tt="uppercase">
+                  max_users
+                </Text>
+                <Text ff="monospace">{capacity}</Text>
+              </Group>
+              <Divider />
+              <Group justify="space-between">
+                <Text c="dimmed" tt="uppercase">
+                  cmd_char
+                </Text>
+                <Text ff="monospace">{serverCmdChar}</Text>
+              </Group>
+            </Stack>
+          </Stack>
+          <Stack>
+            <HeadingText text="connection_info" IconComponent={BiServer} />
+            <Stack
+              c="cyan.9"
+              p={8}
+              style={{
+                border: "1px solid var(--mantine-color-default-border)",
+              }}
+              gap={4}
+            >
+              <Group justify="space-between">
+                <Text tt="uppercase" ff="monospace">
+                  port: {serverPort}
+                </Text>
+                <CustomCopyButton value={String(serverPort)} valueName="port" />
+              </Group>
+              <Group justify="space-between">
+                <Text tt="uppercase" ff="monospace">
+                  server_ip: {serverIP}
+                </Text>
+                <CustomCopyButton value={serverIP} valueName="IP" />
+              </Group>
+            </Stack>
+          </Stack>
+          <Stack>
+            <Group justify="space-between">
+              <HeadingText
+                text="active_sessions"
+                IconComponent={MdOutlinePeopleAlt}
+              />
+              <Group
+                px={4}
+                py={2}
+                bdrs={4}
+                style={{
+                  backgroundColor: "var(--mantine-primary-color-light)",
+                  color: "var(--mantine-primary-color-filled)",
+                }}
+              >
+                <Text c="primary" size="xs">
+                  {activeUsers.length} / {capacity}
+                </Text>
+              </Group>
+            </Group>
+            <Stack gap={8}>
+              {activeUsers.map((username) => (
+                <Group
+                  key={username}
+                  p={8}
+                  gap={8}
+                  style={{
+                    backgroundColor:
+                      "light-dark(var(--mantine-color-gray-2), var(--mantine-color-gray-8))",
+                  }}
+                >
+                  <Badge color="green.4" variant="filled" circle size="0.7em" />
+                  <Text tt="uppercase" ff="monospace">
+                    {username}
+                  </Text>
+                </Group>
+              ))}
+              {inactiveUsers.map((username) => (
+                <Group
+                  key={username}
+                  p={8}
+                  gap={8}
+                  opacity={0.6}
+                  style={{
+                    backgroundColor:
+                      "light-dark(var(--mantine-color-gray-2), var(--mantine-color-gray-8))",
+                  }}
+                >
+                  <Badge color="dark.2" variant="filled" circle size="0.7em" />
+                  <Text tt="uppercase" ff="monospace">
+                    {username}
+                  </Text>
+                </Group>
+              ))}
+            </Stack>
+            <Button
+              onClick={handleServerStop}
+              disabled={loading}
+              tt="uppercase"
+              color="red.4"
+              c="black"
+              radius={0}
+              fullWidth
+            >
+              stop_server
+            </Button>
+          </Stack>
+        </Stack>
+      </Drawer>
       <ToastContainer />
     </Stack>
   );
