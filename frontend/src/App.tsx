@@ -52,6 +52,7 @@ function App() {
       </Group>
       <Tabs
         defaultValue="start_server"
+        keepMountedMode="display-none"
         classNames={{ tab: styles.tab }}
         style={{
           display: "flex",

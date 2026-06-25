@@ -113,7 +113,9 @@ function Client() {
 
   const handleClientStart = async () => {
     try {
-      await startClient(port, serverAddress);
+      const msg = await startClient(port, serverAddress);
+      const match = msg.match(/Command character: (.)/);
+      if (match) setCommandChar(match[1]);
       setConnected(true);
       setSignedIn(false);
       setUsername("");
@@ -338,6 +340,7 @@ function Client() {
               : [
                   "(SERVER) You're connected. Sign in to start chatting.",
                   "(SERVER) Use the buttons below to register a new account or log in.",
+                  `(SERVER) Commands marked * require login. To use commands begin them with: ${commandChar}`,
                   ...messages,
                 ]
             : ["(SERVER) Connect to a server to see the chat log here."]
