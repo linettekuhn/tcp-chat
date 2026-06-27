@@ -248,6 +248,11 @@ function Client() {
         const text = await response.text();
         throw new Error(text);
       }
+      const data = await response.clone().json().catch(() => null);
+      if (data?.empty) {
+        toast.warn("Nothing has shown up in the chat yet");
+        return;
+      }
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");

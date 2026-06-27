@@ -276,7 +276,7 @@ router.post("/stop", (req, res) => {
 router.get("/cmdlog/download", (req, res) => {
   const logPath = path.join(process.cwd(), "command_log.txt");
   if (!fs.existsSync(logPath)) {
-    return res.status(404).send("Command log not found");
+    return res.json({ empty: true });
   }
   let content = fs.readFileSync(logPath, "utf-8");
   const tzOffset = parseInt(req.query.tzOffset, 10);
@@ -289,7 +289,7 @@ router.get("/cmdlog/download", (req, res) => {
 router.get("/chatlog/download", (req, res) => {
   const logPath = path.join(process.cwd(), "chat_log.txt");
   if (!fs.existsSync(logPath)) {
-    return res.status(404).send("Chat log not found");
+    return res.json({ empty: true });
   }
   let content = fs.readFileSync(logPath, "utf-8");
   const tzOffset = parseInt(req.query.tzOffset, 10);
