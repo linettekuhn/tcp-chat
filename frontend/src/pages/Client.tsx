@@ -206,9 +206,17 @@ function Client() {
 
   const handleSendCommand = async () => {
     const input = command.trim();
-    const finalCommand = input.startsWith(commandChar)
-      ? input
-      : commandChar + input;
+    if (!input) return;
+    let finalCommand: string;
+    if (signedIn) {
+      finalCommand = input.startsWith(commandChar)
+        ? input
+        : `${commandChar}send "${input}"`;
+    } else {
+      finalCommand = input.startsWith(commandChar)
+        ? input
+        : commandChar + input;
+    }
     const parts = finalCommand.split(/\s+/);
     if (
       parts.length >= 3 &&
@@ -235,7 +243,6 @@ function Client() {
     { label: "log in", cmd: "login", guestOnly: true },
     { label: "help", cmd: "help" },
     { label: "log out", cmd: "logout", auth: true },
-    { label: "send", cmd: 'send ""', auth: true, cursorEnd: true },
     { label: "who's online", cmd: "getlist", auth: true },
     { label: "chat history", cmd: "getchatlog", auth: true, download: true },
     { label: "command history", cmd: "getcmdlog", auth: true, download: true },
@@ -243,12 +250,17 @@ function Client() {
 
   const downloadLog = async (type: "cmdlog" | "chatlog") => {
     try {
-      const response = await fetch(`${BASEURL}/client/${type}/download?tzOffset=${new Date().getTimezoneOffset()}`);
+      const response = await fetch(
+        `${BASEURL}/client/${type}/download?tzOffset=${new Date().getTimezoneOffset()}`,
+      );
       if (!response.ok) {
         const text = await response.text();
         throw new Error(text);
       }
-      const data = await response.clone().json().catch(() => null);
+      const data = await response
+        .clone()
+        .json()
+        .catch(() => null);
       if (data?.empty) {
         toast.warn("Nothing has shown up in the chat yet");
         return;
@@ -264,11 +276,14 @@ function Client() {
       URL.revokeObjectURL(url);
       toast.success(`${type === "cmdlog" ? "Command" : "Chat"} log downloaded`);
     } catch (error) {
-      toast.error("Failed to download log: " + (error instanceof Error ? error.message : "Unknown error"));
+      toast.error(
+        "Failed to download log: " +
+          (error instanceof Error ? error.message : "Unknown error"),
+      );
     }
   };
 
-  const handleCommandClick = (cmd: string, cursorEnd?: boolean, download?: boolean) => {
+  const handleCommandClick = async (cmd: string, download?: boolean) => {
     if (download) {
       downloadLog(cmd.replace("get", "") as "cmdlog" | "chatlog");
       return;
@@ -281,23 +296,29 @@ function Client() {
     }
     const full = commandChar + cmd;
     setCommand(full);
-    inputRef.current?.focus();
-    if (cursorEnd) {
-      setTimeout(() => {
-        inputRef.current?.focus();
-        const pos = full.length - 1;
-        inputRef.current?.setSelectionRange(pos, pos);
-      }, 0);
+    try {
+      await sendCommand(full);
+      setCommand("");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      }
     }
   };
 
-  const handleAuthSubmit = () => {
+  const handleAuthSubmit = async () => {
     if (!authModalMode || !authUsername.trim() || !authPassword.trim()) return;
     const full = `${commandChar}${authModalMode} ${authUsername.trim()} ${authPassword.trim()}`;
-    setCommand(full);
     setAuthModalMode(null);
     pendingUsernameRef.current = authUsername.trim();
-    setTimeout(() => inputRef.current?.focus(), 0);
+    try {
+      await sendCommand(full);
+      setCommand("");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      }
+    }
   };
 
   const closeMessageStream = () => {
@@ -468,7 +489,7 @@ function Client() {
                   ...messages,
                 ]
               : [
-                  "(SERVER) You're connected. Sign in to start chatting.",
+                  "(SERVER) You're connected. Register and log in to start chatting.",
                   "(SERVER) Use the buttons below to register a new account or log in.",
                   `(SERVER) Commands marked * require login. To use commands begin them with: ${commandChar}`,
                   ...messages,
@@ -497,7 +518,12 @@ function Client() {
                     variant="light"
                     radius="xl"
                     tt="uppercase"
-                    onClick={() => handleCommandClick(b.cmd, b.cursorEnd, (b as { download?: boolean }).download)}
+                    onClick={() =>
+                      handleCommandClick(
+                        b.cmd,
+                        (b as { download?: boolean }).download,
+                      )
+                    }
                   >
                     {b.label}
                   </Button>
@@ -512,10 +538,14 @@ function Client() {
               value={command}
               onChange={(e) => {
                 const val = e.target.value;
-                if (val && !val.startsWith(commandChar)) {
-                  setCommand(commandChar + val);
-                } else {
+                if (signedIn) {
                   setCommand(val);
+                } else {
+                  if (val && !val.startsWith(commandChar)) {
+                    setCommand(commandChar + val);
+                  } else {
+                    setCommand(val);
+                  }
                 }
               }}
               onKeyDown={(e) => {
@@ -525,7 +555,9 @@ function Client() {
               styles={{ input: { fontFamily: "JetBrains Mono" } }}
               placeholder={
                 connected
-                  ? "Execute command or send message..."
+                  ? signedIn
+                    ? `Type a message or use ${commandChar} for commands...`
+                    : "Execute command or send message..."
                   : "Command input locked until server starts..."
               }
             />
@@ -543,11 +575,7 @@ function Client() {
       <Modal
         opened={authModalMode !== null}
         onClose={() => setAuthModalMode(null)}
-        title={
-          authModalMode === "register"
-            ? "Create register command"
-            : "Create log in command"
-        }
+        title={authModalMode}
         tt="capitalize"
         styles={{ title: { fontWeight: 900 } }}
         centered
@@ -577,7 +605,7 @@ function Client() {
                 Cancel
               </Button>
               <Button variant="light" type="submit">
-                Create
+                Send
               </Button>
             </Group>
           </Stack>
