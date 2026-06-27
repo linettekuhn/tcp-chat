@@ -1,5 +1,11 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  type ReactNode,
+} from "react";
 import { stopServer } from "../api/tcpServer";
 import { toast } from "react-toastify";
 
@@ -42,22 +48,31 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setActive(false);
     await stopServer(port, serverAddress).catch(() => {});
-    toast.success("Server stopped!");
+    toast.info("Server stopped!");
     setLoading(false);
   }, [port, serverAddress]);
 
   return (
     <ServerContext.Provider
       value={{
-        port, setPort,
-        capacity, setCapacity,
-        commandChar, setCmdChar,
-        serverAddress, setServerAddress,
-        isActive, setActive,
-        loading, setLoading,
-        activeUsers, setActiveUsers,
-        inactiveUsers, setInactiveUsers,
-        chatMessages, setChatMessages,
+        port,
+        setPort,
+        capacity,
+        setCapacity,
+        commandChar,
+        setCmdChar,
+        serverAddress,
+        setServerAddress,
+        isActive,
+        setActive,
+        loading,
+        setLoading,
+        activeUsers,
+        setActiveUsers,
+        inactiveUsers,
+        setInactiveUsers,
+        chatMessages,
+        setChatMessages,
         handleServerStop,
       }}
     >
@@ -68,6 +83,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
 
 export function useServerContext() {
   const ctx = useContext(ServerContext);
-  if (!ctx) throw new Error("useServerContext must be used within ServerProvider");
+  if (!ctx)
+    throw new Error("useServerContext must be used within ServerProvider");
   return ctx;
 }

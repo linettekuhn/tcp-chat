@@ -14,7 +14,7 @@ import { startServer, getHostIP } from "../api/tcpServer";
 import { BASEURL } from "../api/config";
 import { sendAdminCommand, startAdminClient } from "../api/tcpServer";
 import Chatbox from "../components/Chatbox";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import {
   MdHelpOutline,
   MdOutlinePeopleAlt,
@@ -47,15 +47,22 @@ function HeadingText({
 
 function Server() {
   const {
-    port, setPort,
-    capacity, setCapacity,
-    commandChar, setCmdChar,
-    serverAddress, setServerAddress,
-    isActive, setActive,
-    loading, setLoading,
+    port,
+    setPort,
+    capacity,
+    setCapacity,
+    commandChar,
+    setCmdChar,
+    serverAddress,
+    setServerAddress,
+    isActive,
+    setActive,
+    loading,
+    setLoading,
     activeUsers,
     inactiveUsers,
-    chatMessages, setChatMessages,
+    chatMessages,
+    setChatMessages,
     setActiveUsers,
     setInactiveUsers,
     handleServerStop,
@@ -519,7 +526,6 @@ function Server() {
           </Stack>
         </Group>
       )}
-      <ToastContainer />
     </Stack>
   );
 }

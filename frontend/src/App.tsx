@@ -12,6 +12,7 @@ import Server from "./pages/Server";
 import Client from "./pages/Client";
 import { ImTerminal } from "react-icons/im";
 import { LuLogIn, LuRadio } from "react-icons/lu";
+import { ToastContainer } from "react-toastify";
 import styles from "./App.module.css";
 
 function App() {
@@ -110,6 +111,13 @@ function App() {
             <Client />
           </Tabs.Panel>
         </Tabs>
+        <ToastContainer
+          position="top-right"
+          autoClose={2000}
+          stacked
+          theme="colored"
+          pauseOnFocusLoss={false}
+        />
       </ServerProvider>
     </div>
   );

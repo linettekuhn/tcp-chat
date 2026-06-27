@@ -17,7 +17,7 @@ import {
 import { startClient, stopClient, sendCommand } from "../api/tcpClient";
 import { BASEURL } from "../api/config";
 import Chatbox from "../components/Chatbox";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import {
   MdHelpOutline,
   MdOutlinePeopleAlt,
@@ -69,6 +69,7 @@ function Client() {
   const [commandChar, setCommandChar] = useState("~");
   const [messages, setMessages] = useState<string[]>([]);
   const [connected, setConnected] = useState(false);
+  const [clientLoading, setClientLoading] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [username, setUsername] = useState("");
   const [authModalMode, setAuthModalMode] = useState<
@@ -165,6 +166,7 @@ function Client() {
   };
 
   const handleClientStart = async () => {
+    setClientLoading(true);
     try {
       const msg = await startClient(port, serverAddress);
       const match = msg.match(/Command character: (.)/);
@@ -178,10 +180,13 @@ function Client() {
       if (error instanceof Error) {
         toast.error(error.message);
       }
+    } finally {
+      setClientLoading(false);
     }
   };
 
   const handleClientStop = async () => {
+    setClientLoading(true);
     try {
       closeMessageStream();
       await stopClient();
@@ -189,11 +194,13 @@ function Client() {
       setSignedIn(false);
       setUsername("");
       setMessages([]);
-      toast.warning("Client stopped");
+      toast.info("Client stopped");
     } catch (error: unknown) {
       if (error instanceof Error) {
         toast.error(error.message);
       }
+    } finally {
+      setClientLoading(false);
     }
   };
 
@@ -376,7 +383,12 @@ function Client() {
                   }
                 />
               </Stack>
-              <Button onClick={handleClientStart} radius={0} c="black">
+              <Button
+                onClick={handleClientStart}
+                disabled={clientLoading}
+                radius={0}
+                c="black"
+              >
                 JOIN_SERVER
               </Button>
             </Group>
@@ -404,6 +416,7 @@ function Client() {
               )}
               <Button
                 onClick={handleClientStop}
+                disabled={clientLoading}
                 tt="uppercase"
                 color="red.4"
                 c="black"
@@ -662,7 +675,6 @@ function Client() {
           </Stack>
         </Stack>
       </Drawer>
-      <ToastContainer />
     </Stack>
   );
 }

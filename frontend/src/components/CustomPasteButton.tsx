@@ -19,7 +19,7 @@ export default function CustomPasteButton({
       setJustPasted(true);
       setTimeout(() => setJustPasted(false), 1500);
     } catch {
-      toast.error("Failed to paste");
+      toast.warn("Failed to paste");
     }
   };
 
