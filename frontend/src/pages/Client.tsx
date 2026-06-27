@@ -237,11 +237,37 @@ function Client() {
     { label: "log out", cmd: "logout", auth: true },
     { label: "send", cmd: 'send ""', auth: true, cursorEnd: true },
     { label: "who's online", cmd: "getlist", auth: true },
-    { label: "chat history", cmd: "getchatlog", auth: true },
-    { label: "command history", cmd: "getcmdlog", auth: true },
+    { label: "chat history", cmd: "getchatlog", auth: true, download: true },
+    { label: "command history", cmd: "getcmdlog", auth: true, download: true },
   ];
 
-  const handleCommandClick = (cmd: string, cursorEnd?: boolean) => {
+  const downloadLog = async (type: "cmdlog" | "chatlog") => {
+    try {
+      const response = await fetch(`${BASEURL}/client/${type}/download?tzOffset=${new Date().getTimezoneOffset()}`);
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text);
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${type === "cmdlog" ? "command_log" : "chat_log"}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(`${type === "cmdlog" ? "Command" : "Chat"} log downloaded`);
+    } catch (error) {
+      toast.error("Failed to download log: " + (error instanceof Error ? error.message : "Unknown error"));
+    }
+  };
+
+  const handleCommandClick = (cmd: string, cursorEnd?: boolean, download?: boolean) => {
+    if (download) {
+      downloadLog(cmd.replace("get", "") as "cmdlog" | "chatlog");
+      return;
+    }
     if (cmd === "register" || cmd === "login") {
       setAuthUsername("");
       setAuthPassword("");
@@ -466,7 +492,7 @@ function Client() {
                     variant="light"
                     radius="xl"
                     tt="uppercase"
-                    onClick={() => handleCommandClick(b.cmd, b.cursorEnd)}
+                    onClick={() => handleCommandClick(b.cmd, b.cursorEnd, (b as { download?: boolean }).download)}
                   >
                     {b.label}
                   </Button>

@@ -206,7 +206,7 @@ int main(int argc, char* argv[])
 				{
 					std::cerr << "(SERVER) Send failed!" << std::endl;
 				}
-				std::string response = client.handleServer();
+				std::string response = client.handleServerAll();
 				if (response == "ERROR")
 				{
 					std::cout << "[DEBUG-EXIT] connection lost" << std::endl;

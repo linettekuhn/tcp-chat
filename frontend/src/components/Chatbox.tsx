@@ -25,7 +25,7 @@ export default function Chatbox({ messages, children }: Props) {
             return (
               <Text
                 key={parsed.id}
-                component="p"
+                component="div"
                 fs={parsed.isSystem ? "italic" : ""}
                 c={parsed.isSystem ? "dimmed" : ""}
                 ff="monospace"

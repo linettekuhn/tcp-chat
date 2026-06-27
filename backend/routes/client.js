@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { spawn } = require("child_process");
 const path = require("path");
+const fs = require("fs");
 const serverPath = path.join(__dirname, "../bin/TCPChatServer");
 const shared = require("../shared-state");
 
@@ -271,5 +272,57 @@ router.post("/stop", (req, res) => {
     errorHandler(`Error caught writing to stdin stream: ${error.message}`);
   }
 });
+
+router.get("/cmdlog/download", (req, res) => {
+  const logPath = path.join(process.cwd(), "command_log.txt");
+  if (!fs.existsSync(logPath)) {
+    return res.status(404).send("Command log not found");
+  }
+  let content = fs.readFileSync(logPath, "utf-8");
+  const tzOffset = parseInt(req.query.tzOffset, 10);
+  if (!isNaN(tzOffset)) content = convertTimezone(content, tzOffset);
+  res.setHeader("Content-Type", "text/plain; charset=utf-8");
+  res.setHeader("Content-Disposition", "attachment; filename=command_log.txt");
+  res.send(content);
+});
+
+router.get("/chatlog/download", (req, res) => {
+  const logPath = path.join(process.cwd(), "chat_log.txt");
+  if (!fs.existsSync(logPath)) {
+    return res.status(404).send("Chat log not found");
+  }
+  let content = fs.readFileSync(logPath, "utf-8");
+  const tzOffset = parseInt(req.query.tzOffset, 10);
+  if (!isNaN(tzOffset)) content = convertTimezone(content, tzOffset);
+  res.setHeader("Content-Type", "text/plain; charset=utf-8");
+  res.setHeader("Content-Disposition", "attachment; filename=chat_log.txt");
+  res.send(content);
+});
+
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH_INDEX = Object.fromEntries(MONTH_NAMES.map((m, i) => [m, i]));
+const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+const TIMESTAMP_RE = /\[(\w{3}) (\w{3}) +(\d{1,2}) (\d{4}) (\d{2}):(\d{2}):(\d{2}) (AM|PM)\]/g;
+
+function convertTimezone(content, tzOffset) {
+  return content.replace(TIMESTAMP_RE, (match, _day, month, dayNum, year, hours, mins, secs, ampm) => {
+    let h = parseInt(hours, 10);
+    if (ampm === 'PM' && h !== 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+
+    const utcMs = Date.UTC(
+      parseInt(year, 10), MONTH_INDEX[month], parseInt(dayNum, 10),
+      h, parseInt(mins, 10), parseInt(secs, 10)
+    );
+
+    const d = new Date(utcMs - tzOffset * 60000);
+
+    const h12 = d.getUTCHours() % 12 || 12;
+    const newAmpm = d.getUTCHours() >= 12 ? 'PM' : 'AM';
+
+    return `[${DAY_NAMES[d.getUTCDay()]} ${MONTH_NAMES[d.getUTCMonth()]} ${String(d.getUTCDate()).padStart(2, ' ')} ${d.getUTCFullYear()} ${String(h12).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}:${String(d.getUTCSeconds()).padStart(2, '0')} ${newAmpm}]`;
+  });
+}
 
 module.exports = router;
