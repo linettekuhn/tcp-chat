@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ComponentType } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import {
   Text,
   TextInput,
@@ -9,6 +9,7 @@ import {
   NumberInput,
   Divider,
   Badge,
+  Drawer,
 } from "@mantine/core";
 import { startServer, getHostIP } from "../api/tcpServer";
 import { BASEURL } from "../api/config";
@@ -67,6 +68,8 @@ function Server() {
     setInactiveUsers,
     handleServerStop,
   } = useServerContext();
+
+  const [drawerOpened, setDrawerOpened] = useState(false);
 
   const collectingRef = useRef<{
     list: "active" | "registered" | null;
@@ -250,6 +253,136 @@ function Server() {
     }
   };
 
+  const adminPanelContent = (
+    <>
+      <Stack>
+        <HeadingText
+          text="server_configuration"
+          IconComponent={MdOutlineTerminal}
+        />
+        <Stack gap={8}>
+          <Group justify="space-between">
+            <Text c="dimmed" tt="uppercase">
+              max_users
+            </Text>
+            <Text ff="monospace">{capacity}</Text>
+          </Group>
+          <Divider />
+          <Group justify="space-between">
+            <Text c="dimmed" tt="uppercase">
+              cmd_char
+            </Text>
+            <Text ff="monospace">{commandChar}</Text>
+          </Group>
+        </Stack>
+      </Stack>
+      <Stack>
+        <HeadingText text="connection_info" IconComponent={BiServer} />
+        <Stack
+          c="cyan.9"
+          p={8}
+          style={{
+            border: "1px solid var(--mantine-color-default-border)",
+          }}
+          gap={4}
+        >
+          <Group justify="space-between">
+            <Text tt="uppercase" ff="monospace">
+              port: {port}
+            </Text>
+            <CustomCopyButton value={String(port)} valueName="port" />
+          </Group>
+          <Group justify="space-between">
+            <Text tt="uppercase" ff="monospace">
+              server_ip: {serverAddress}
+            </Text>
+            <CustomCopyButton value={serverAddress} valueName="IP" />
+          </Group>
+        </Stack>
+        <Stack>
+          <Group justify="space-between">
+            <HeadingText
+              text="active_sessions"
+              IconComponent={MdOutlinePeopleAlt}
+            />
+            <Group
+              px={4}
+              py={2}
+              bdrs={4}
+              style={{
+                backgroundColor: "var(--mantine-primary-color-light)",
+                color: "var(--mantine-primary-color-filled)",
+              }}
+            >
+              <Text c="primary" size="xs">
+                {activeUsers.length} / {capacity}
+              </Text>
+            </Group>
+          </Group>
+          <Stack gap={8}>
+            {activeUsers.map((username) => {
+              return (
+                <Group
+                  key={username}
+                  p={8}
+                  gap={8}
+                  style={{
+                    backgroundColor:
+                      "light-dark(var(--mantine-color-gray-2), var(--mantine-color-gray-8))",
+                  }}
+                >
+                  <Badge
+                    color="green.4"
+                    variant="filled"
+                    circle
+                    size="0.7em"
+                  />
+                  <Text tt="uppercase" ff="monospace">
+                    {username}
+                  </Text>
+                </Group>
+              );
+            })}
+            {inactiveUsers.map((username) => {
+              return (
+                <Group
+                  key={username}
+                  p={8}
+                  gap={8}
+                  opacity={0.6}
+                  style={{
+                    backgroundColor:
+                      "light-dark(var(--mantine-color-gray-2), var(--mantine-color-gray-8))",
+                  }}
+                >
+                  <Badge
+                    color="dark.2"
+                    variant="filled"
+                    circle
+                    size="0.7em"
+                  />
+                  <Text tt="uppercase" ff="monospace">
+                    {username}
+                  </Text>
+                </Group>
+              );
+            })}
+          </Stack>
+          <Button
+            onClick={handleServerStop}
+            disabled={loading}
+            tt="uppercase"
+            color="red.4"
+            c="black"
+            radius={0}
+          >
+            stop_server
+          </Button>
+        </Stack>
+      </Stack>
+    </>
+  );
+
   return (
     <Stack h="100%" gap={0} style={{ overflow: "hidden" }}>
       {!isActive ? (
@@ -390,141 +523,56 @@ function Server() {
           />
         </Stack>
       ) : (
-        <Group h="100%" w="100%" align="flex-start">
-          <Chatbox messages={chatMessages} />
-          <Stack
-            maw={300}
-            p={16}
-            h="100%"
-            style={{ background: "var(--color-drawer-background)" }}
+        <Stack h="100%" gap={0} style={{ overflow: "hidden" }}>
+          <Group hiddenFrom="sm" justify="flex-end" p="sm" style={{ flexShrink: 0 }}>
+            <Button
+              onClick={() => setDrawerOpened(true)}
+              tt="uppercase"
+              variant="light"
+              radius={0}
+              size="xs"
+              leftSection={<BiServer />}
+            >
+              admin
+            </Button>
+            <Button
+              onClick={handleServerStop}
+              disabled={loading}
+              tt="uppercase"
+              color="red.4"
+              c="black"
+              radius={0}
+              size="xs"
+            >
+              stop_server
+            </Button>
+          </Group>
+          <Group h="100%" w="100%" align="flex-start" style={{ flex: 1, overflow: "hidden" }}>
+            <Chatbox messages={chatMessages} />
+            <Stack
+              visibleFrom="sm"
+              maw={300}
+              p={16}
+              h="100%"
+              style={{ background: "var(--color-drawer-background)" }}
+            >
+              {adminPanelContent}
+            </Stack>
+          </Group>
+          <Drawer
+            hiddenFrom="sm"
+            opened={drawerOpened}
+            onClose={() => setDrawerOpened(false)}
+            title="ADMIN PANEL"
+            padding="md"
+            position="right"
+            styles={{ title: { fontWeight: 900 } }}
           >
-            <Stack>
-              <HeadingText
-                text="server_configuration"
-                IconComponent={MdOutlineTerminal}
-              />
-              <Stack gap={8}>
-                <Group justify="space-between">
-                  <Text c="dimmed" tt="uppercase">
-                    max_users
-                  </Text>
-                  <Text ff="monospace">{capacity}</Text>
-                </Group>
-                <Divider />
-                <Group justify="space-between">
-                  <Text c="dimmed" tt="uppercase">
-                    cmd_char
-                  </Text>
-                  <Text ff="monospace">{commandChar}</Text>
-                </Group>
-              </Stack>
+            <Stack gap="lg">
+              {adminPanelContent}
             </Stack>
-            <Stack>
-              <HeadingText text="connection_info" IconComponent={BiServer} />
-              <Stack
-                c="cyan.9"
-                p={8}
-                style={{
-                  border: "1px solid var(--mantine-color-default-border)",
-                }}
-                gap={4}
-              >
-                <Group justify="space-between">
-                  <Text tt="uppercase" ff="monospace">
-                    port: {port}
-                  </Text>
-                  <CustomCopyButton value={String(port)} valueName="port" />
-                </Group>
-                <Group justify="space-between">
-                  <Text tt="uppercase" ff="monospace">
-                    server_ip: {serverAddress}
-                  </Text>
-                  <CustomCopyButton value={serverAddress} valueName="IP" />
-                </Group>
-              </Stack>
-              <Stack>
-                <Group justify="space-between">
-                  <HeadingText
-                    text="active_sessions"
-                    IconComponent={MdOutlinePeopleAlt}
-                  />
-                  <Group
-                    px={4}
-                    py={2}
-                    bdrs={4}
-                    style={{
-                      backgroundColor: "var(--mantine-primary-color-light)",
-                      color: "var(--mantine-primary-color-filled)",
-                    }}
-                  >
-                    <Text c="primary" size="xs">
-                      {activeUsers.length} / {capacity}
-                    </Text>
-                  </Group>
-                </Group>
-                <Stack gap={8}>
-                  {activeUsers.map((username) => {
-                    return (
-                      <Group
-                        key={username}
-                        p={8}
-                        gap={8}
-                        style={{
-                          backgroundColor:
-                            "light-dark(var(--mantine-color-gray-2), var(--mantine-color-gray-8))",
-                        }}
-                      >
-                        <Badge
-                          color="green.4"
-                          variant="filled"
-                          circle
-                          size="0.7em"
-                        />
-                        <Text tt="uppercase" ff="monospace">
-                          {username}
-                        </Text>
-                      </Group>
-                    );
-                  })}
-                  {inactiveUsers.map((username) => {
-                    return (
-                      <Group
-                        key={username}
-                        p={8}
-                        gap={8}
-                        opacity={0.6}
-                        style={{
-                          backgroundColor:
-                            "light-dark(var(--mantine-color-gray-2), var(--mantine-color-gray-8))",
-                        }}
-                      >
-                        <Badge
-                          color="dark.2"
-                          variant="filled"
-                          circle
-                          size="0.7em"
-                        />
-                        <Text tt="uppercase" ff="monospace">
-                          {username}
-                        </Text>
-                      </Group>
-                    );
-                  })}
-                </Stack>
-                <Button
-                  onClick={handleServerStop}
-                  disabled={loading}
-                  tt="uppercase"
-                  color="red.4"
-                  c="black"
-                  radius={0}
-                >
-                  stop_server
-                </Button>
-              </Stack>
-            </Stack>
-          </Stack>
-        </Group>
+          </Drawer>
+        </Stack>
       )}
     </Stack>
   );
