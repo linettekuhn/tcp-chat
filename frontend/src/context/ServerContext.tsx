@@ -8,6 +8,7 @@ import {
 } from "react";
 import { stopServer } from "../api/tcpServer";
 import { toast } from "react-toastify";
+import type { ChatMessage } from "../types";
 
 interface ServerContextValue {
   port: number;
@@ -26,8 +27,8 @@ interface ServerContextValue {
   setActiveUsers: (v: string[]) => void;
   inactiveUsers: string[];
   setInactiveUsers: (v: string[]) => void;
-  chatMessages: string[];
-  setChatMessages: (v: string[] | ((prev: string[]) => string[])) => void;
+  chatMessages: ChatMessage[];
+  setChatMessages: (v: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => void;
   handleServerStop: () => Promise<void>;
 }
 
@@ -42,7 +43,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [activeUsers, setActiveUsers] = useState<string[]>([]);
   const [inactiveUsers, setInactiveUsers] = useState<string[]>([]);
-  const [chatMessages, setChatMessages] = useState<string[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 
   const handleServerStop = useCallback(async () => {
     setLoading(true);

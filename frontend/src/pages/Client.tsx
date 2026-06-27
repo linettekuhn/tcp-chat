@@ -17,6 +17,7 @@ import {
 import { startClient, stopClient, sendCommand } from "../api/tcpClient";
 import { BASEURL } from "../api/config";
 import Chatbox from "../components/Chatbox";
+import { parseChatMessage, type ChatMessage } from "../types";
 import { toast } from "react-toastify";
 import {
   MdHelpOutline,
@@ -67,7 +68,7 @@ function Client() {
   const [serverAddress, setServerAddress] = useState("");
   const [command, setCommand] = useState("");
   const [commandChar, setCommandChar] = useState("~");
-  const [messages, setMessages] = useState<string[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [connected, setConnected] = useState(false);
   const [clientLoading, setClientLoading] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
@@ -132,7 +133,8 @@ function Client() {
             console.log(data);
             const cmdCharMatch = data.match(/begin them with: (.)/);
             if (cmdCharMatch) setCommandChar(cmdCharMatch[1]);
-            setMessages((prev) => [...prev, data]);
+            const parsed = parseChatMessage(data);
+            if (parsed) setMessages((prev) => [...prev, parsed]);
             if (data === "(SERVER) User logged in!") {
               setSignedIn(true);
               setUsername(pendingUsernameRef.current);
@@ -485,16 +487,28 @@ function Client() {
           connected
             ? signedIn
               ? [
-                  `(SERVER) You're in. Say something, or use the buttons below to see who's online.`,
+                  parseChatMessage(
+                    `(SERVER) You're in. Say something, or use the buttons below to see who's online.`,
+                  )!,
                   ...messages,
                 ]
               : [
-                  "(SERVER) You're connected. Register and log in to start chatting.",
-                  "(SERVER) Use the buttons below to register a new account or log in.",
-                  `(SERVER) Commands marked * require login. To use commands begin them with: ${commandChar}`,
+                  parseChatMessage(
+                    "(SERVER) You're connected. Register and log in to start chatting.",
+                  )!,
+                  parseChatMessage(
+                    "(SERVER) Use the buttons below to register a new account or log in.",
+                  )!,
+                  parseChatMessage(
+                    `(SERVER) Commands marked * require login. To use commands begin them with: ${commandChar}`,
+                  )!,
                   ...messages,
                 ]
-            : ["(SERVER) Connect to a server to see the chat log here."]
+            : [
+                parseChatMessage(
+                  "(SERVER) Connect to a server to see the chat log here.",
+                )!,
+              ]
         }
       >
         <Stack

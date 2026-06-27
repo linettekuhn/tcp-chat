@@ -15,6 +15,7 @@ import { startServer, getHostIP } from "../api/tcpServer";
 import { BASEURL } from "../api/config";
 import { sendAdminCommand, startAdminClient } from "../api/tcpServer";
 import Chatbox from "../components/Chatbox";
+import { parseChatMessage } from "../types";
 import { toast } from "react-toastify";
 import {
   MdHelpOutline,
@@ -158,7 +159,8 @@ function Server() {
             const eventData = dataLines.join("\n");
 
             for (const data of eventData.split("\n")) {
-              setChatMessages((prev) => [...prev, data]);
+              const parsed = parseChatMessage(data);
+              if (parsed) setChatMessages((prev) => [...prev, parsed]);
               if (data === "(SERVER) Logged in users:") {
                 finalizeCollection();
                 collectingRef.current = { list: "active", usernames: [] };
@@ -331,12 +333,7 @@ function Server() {
                       "light-dark(var(--mantine-color-gray-2), var(--mantine-color-gray-8))",
                   }}
                 >
-                  <Badge
-                    color="green.4"
-                    variant="filled"
-                    circle
-                    size="0.7em"
-                  />
+                  <Badge color="green.4" variant="filled" circle size="0.7em" />
                   <Text tt="uppercase" ff="monospace">
                     {username}
                   </Text>
@@ -355,12 +352,7 @@ function Server() {
                       "light-dark(var(--mantine-color-gray-2), var(--mantine-color-gray-8))",
                   }}
                 >
-                  <Badge
-                    color="dark.2"
-                    variant="filled"
-                    circle
-                    size="0.7em"
-                  />
+                  <Badge color="dark.2" variant="filled" circle size="0.7em" />
                   <Text tt="uppercase" ff="monospace">
                     {username}
                   </Text>
@@ -519,12 +511,17 @@ function Server() {
             </Group>
           </Stack>
           <Chatbox
-            messages={["(SERVER) Launch your server to see the chat log here."]}
+            messages={[parseChatMessage("(SERVER) Launch your server to see the chat log here.")!]}
           />
         </Stack>
       ) : (
         <Stack h="100%" gap={0} style={{ overflow: "hidden" }}>
-          <Group hiddenFrom="sm" justify="flex-end" p="sm" style={{ flexShrink: 0 }}>
+          <Group
+            hiddenFrom="sm"
+            justify="flex-end"
+            p="sm"
+            style={{ flexShrink: 0 }}
+          >
             <Button
               onClick={() => setDrawerOpened(true)}
               tt="uppercase"
@@ -547,7 +544,12 @@ function Server() {
               stop_server
             </Button>
           </Group>
-          <Group h="100%" w="100%" align="flex-start" style={{ flex: 1, overflow: "hidden" }}>
+          <Group
+            h="100%"
+            w="100%"
+            align="flex-start"
+            style={{ flex: 1, overflow: "hidden" }}
+          >
             <Chatbox messages={chatMessages} />
             <Stack
               visibleFrom="sm"
@@ -568,9 +570,7 @@ function Server() {
             position="right"
             styles={{ title: { fontWeight: 900 } }}
           >
-            <Stack gap="lg">
-              {adminPanelContent}
-            </Stack>
+            <Stack gap="lg">{adminPanelContent}</Stack>
           </Drawer>
         </Stack>
       )}
