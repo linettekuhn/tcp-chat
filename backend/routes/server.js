@@ -125,10 +125,10 @@ router.post("/stop", (req, res) => {
       responded = true;
       cmdChar = null;
       serverProcess = null;
-      if (shared.clientProcess) {
-        shared.clientProcess.kill("SIGTERM");
-        shared.clientProcess = null;
+      for (const proc of shared.clientProcesses) {
+        proc.kill("SIGTERM");
       }
+      shared.clientProcesses.clear();
       res.status(200).send("Server was shutdown");
     }
   };

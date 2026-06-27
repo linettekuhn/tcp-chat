@@ -16,21 +16,21 @@ async function handleResponse(res: Response) {
   return res;
 }
 
-export async function startClient(port: number, serverAddress: string) {
+export async function startClient(port: number, serverAddress: string, clientId: string) {
   const response = await handleResponse(
     await fetch(`${BASEURL}/client/start`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ port, serverAddress }),
+      body: JSON.stringify({ port, serverAddress, clientId }),
     })
   );
   const msg = await response.text();
   return msg;
 }
 
-export async function sendCommand(command: string) {
+export async function sendCommand(command: string, clientId: string) {
   const url = `${BASEURL}/client/command`;
   console.log("FETCHING:", url, command);
   let response: Response;
@@ -40,7 +40,7 @@ export async function sendCommand(command: string) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ command }),
+      body: JSON.stringify({ command, clientId }),
     });
   } catch (err) {
     console.error("FETCH failed:", err);
@@ -53,13 +53,14 @@ export async function sendCommand(command: string) {
   return msg;
 }
 
-export async function stopClient() {
+export async function stopClient(clientId: string) {
   await handleResponse(
     await fetch(`${BASEURL}/client/stop`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
+      body: JSON.stringify({ clientId }),
     })
   );
 }

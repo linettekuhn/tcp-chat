@@ -30,7 +30,7 @@ int ChatServer::init(uint16_t port, char commandChar, int capacity)
     }
 
     // listen for incoming requests
-    if (listen(serverSocket, 1) == SOCKET_ERROR)
+    if (listen(serverSocket, SOMAXCONN) == SOCKET_ERROR)
     {
         return SETUP_ERROR;
     }

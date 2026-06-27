@@ -11,6 +11,8 @@
 #include <errno.h>
 #include <csignal>
 #include <sys/socket.h>
+#include <sys/select.h>
+#include <sys/time.h>
 
 #define SOCKET int
 #define SOCKET_ERROR -1
@@ -176,44 +178,105 @@ int main(int argc, char* argv[])
 		{
 			active = true;
 			signal(SIGPIPE, SIG_IGN);
-			// client input loop
+			// disable stdout buffering for real-time pipe output
+			std::setbuf(stdout, NULL);
+
+			int clientSocket = *(client.getSocket());
+
+			// multiplex between stdin and server socket
 			while (true)
 			{
-				// command input
-				std::string command;
-				if (!std::getline(std::cin, command))
+				fd_set readSet;
+				FD_ZERO(&readSet);
+				FD_SET(STDIN_FILENO, &readSet);
+				FD_SET(clientSocket, &readSet);
+
+				int maxFd = (STDIN_FILENO > clientSocket ? STDIN_FILENO : clientSocket) + 1;
+
+				int selResult = select(maxFd, &readSet, nullptr, nullptr, nullptr);
+				if (selResult < 0)
 				{
-					std::cout << "[DEBUG-EXIT] EOF on stdin" << std::endl;
+					if (errno == EINTR) continue;
 					break;
 				}
 
-				// command validation
-				MessageHandler msgHandler(command, client.getCommandChar());
-				if (!msgHandler.ValidateInputCommand())
+				// handle incoming message from server
+				if (FD_ISSET(clientSocket, &readSet))
 				{
-					std::cout << "(SERVER) Invalid command!" << std::endl;
-					continue;
-				}
-				std::string disconnectCmd = std::string(1, client.getCommandChar()) + "disconnect";
-				if (command == disconnectCmd)
-				{
-					std::cout << "[DEBUG-EXIT] disconnect command" << std::endl;
-					client.sendMessage(*(client.getSocket()), disconnectCmd.c_str(), static_cast<int32_t>(disconnectCmd.size() + 1));
-					break;
+					char buffer[256];
+					int length = 0;
+					int result = client.readMessage(clientSocket, buffer, sizeof(buffer), length);
+					if (result != SUCCESS)
+					{
+						std::cout << "[DEBUG-EXIT] connection lost" << std::endl;
+						std::cerr << "(SERVER) Connection with server lost!" << std::endl;
+						break;
+					}
+					std::cout << std::string(buffer, length) << std::endl;
 				}
 
-				if (client.sendMessage(*(client.getSocket()), command.c_str(), static_cast<int32_t>(command.size() + 1)) != SUCCESS)
+				// handle user input
+				if (FD_ISSET(STDIN_FILENO, &readSet))
 				{
-					std::cerr << "(SERVER) Send failed!" << std::endl;
+					std::string command;
+					if (!std::getline(std::cin, command))
+					{
+						std::cout << "[DEBUG-EXIT] EOF on stdin" << std::endl;
+						break;
+					}
+
+					// command validation
+					MessageHandler msgHandler(command, client.getCommandChar());
+					if (!msgHandler.ValidateInputCommand())
+					{
+						std::cout << "(SERVER) Invalid command!" << std::endl;
+						continue;
+					}
+					std::string disconnectCmd = std::string(1, client.getCommandChar()) + "disconnect";
+					if (command == disconnectCmd)
+					{
+						std::cout << "[DEBUG-EXIT] disconnect command" << std::endl;
+						client.sendMessage(clientSocket, disconnectCmd.c_str(), static_cast<int32_t>(disconnectCmd.size() + 1));
+						break;
+					}
+
+					if (client.sendMessage(clientSocket, command.c_str(), static_cast<int32_t>(command.size() + 1)) != SUCCESS)
+					{
+						std::cerr << "(SERVER) Send failed!" << std::endl;
+					}
+
+					// drain any immediate server responses
+					struct timeval drainTimeout;
+					char buffer[256];
+					int length = 0;
+					int result = client.readMessage(clientSocket, buffer, sizeof(buffer), length);
+					if (result == SUCCESS)
+					{
+						std::cout << std::string(buffer, length) << std::endl;
+
+						while (true)
+						{
+							fd_set drainSet;
+							FD_ZERO(&drainSet);
+							FD_SET(clientSocket, &drainSet);
+							drainTimeout.tv_sec = 0;
+							drainTimeout.tv_usec = 10000;
+
+							int dr = select(clientSocket + 1, &drainSet, nullptr, nullptr, &drainTimeout);
+							if (dr <= 0) break;
+
+							result = client.readMessage(clientSocket, buffer, sizeof(buffer), length);
+							if (result != SUCCESS) break;
+							std::cout << std::string(buffer, length) << std::endl;
+						}
+					}
+					else if (result == SHUTDOWN || result == DISCONNECT)
+					{
+						std::cout << "[DEBUG-EXIT] connection lost" << std::endl;
+						std::cerr << "(SERVER) Connection with server lost!" << std::endl;
+						break;
+					}
 				}
-				std::string response = client.handleServerAll();
-				if (response == "ERROR")
-				{
-					std::cout << "[DEBUG-EXIT] connection lost" << std::endl;
-					std::cerr << "(SERVER) Connection with server lost!" << std::endl;
-					break;
-				}
-				std::cout << response << std::endl;
 			}
 
 			client.stop();

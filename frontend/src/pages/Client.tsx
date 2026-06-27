@@ -63,6 +63,7 @@ function Client() {
     handleServerStop,
   } = useServerContext();
 
+  const clientId = useRef(crypto.randomUUID()).current;
   const [drawerOpened, setDrawerOpened] = useState(false);
   const [port, setPort] = useState(31337);
   const [serverAddress, setServerAddress] = useState("");
@@ -91,7 +92,7 @@ function Client() {
     const connect = async () => {
       let disconnectedIntentionally = false;
       try {
-        const response = await fetch(`${BASEURL}/client/output`, {
+        const response = await fetch(`${BASEURL}/client/output?clientId=${clientId}`, {
           signal: abortController.signal,
           headers: { Accept: "text/event-stream" },
         });
@@ -170,7 +171,7 @@ function Client() {
   const handleClientStart = async () => {
     setClientLoading(true);
     try {
-      const msg = await startClient(port, serverAddress);
+      const msg = await startClient(port, serverAddress, clientId);
       const match = msg.match(/Command character: (.)/);
       if (match) setCommandChar(match[1]);
       setConnected(true);
@@ -191,7 +192,7 @@ function Client() {
     setClientLoading(true);
     try {
       closeMessageStream();
-      await stopClient();
+      await stopClient(clientId);
       setConnected(false);
       setSignedIn(false);
       setUsername("");
@@ -229,7 +230,7 @@ function Client() {
     }
     try {
       console.log("SENDING:", finalCommand);
-      await sendCommand(finalCommand);
+      await sendCommand(finalCommand, clientId);
       console.log("SEND succeeded, clearing input");
       setCommand("");
     } catch (error: unknown) {
@@ -299,7 +300,7 @@ function Client() {
     const full = commandChar + cmd;
     setCommand(full);
     try {
-      await sendCommand(full);
+      await sendCommand(full, clientId);
       setCommand("");
     } catch (error: unknown) {
       if (error instanceof Error) {
@@ -314,7 +315,7 @@ function Client() {
     setAuthModalMode(null);
     pendingUsernameRef.current = authUsername.trim();
     try {
-      await sendCommand(full);
+      await sendCommand(full, clientId);
       setCommand("");
     } catch (error: unknown) {
       if (error instanceof Error) {

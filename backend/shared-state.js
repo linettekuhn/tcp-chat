@@ -1,2 +1,2 @@
 // Shared state between route modules to coordinate process lifecycle
-module.exports = { clientProcess: null };
+module.exports = { clientProcesses: new Set() };

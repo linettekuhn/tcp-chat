@@ -6,33 +6,43 @@ const fs = require("fs");
 const serverPath = path.join(__dirname, "../bin/TCPChatServer");
 const shared = require("../shared-state");
 
-let client = null;
-let cmdChar = null;
+const clients = new Map();
 
-process.on("SIGTERM", () => { if (client) { client.kill(); shared.clientProcess = null; client = null; cmdChar = null; } });
-process.on("SIGINT", () => { if (client) { client.kill(); shared.clientProcess = null; client = null; cmdChar = null; } });
+const cleanupClient = (clientId) => {
+  const entry = clients.get(clientId);
+  if (entry) {
+    shared.clientProcesses.delete(entry.process);
+    clients.delete(clientId);
+  }
+};
+
+const killAllClients = () => {
+  for (const [id, entry] of clients) {
+    entry.process.kill();
+  }
+  clients.clear();
+  shared.clientProcesses.clear();
+};
+
+process.on("SIGTERM", killAllClients);
+process.on("SIGINT", killAllClients);
 
 router.post("/start", (req, res) => {
-  if (client) {
-    if (client.exitCode === null && client.signalCode === null) {
-      return res.status(400).send("Client already running");
-    }
-    // orphaned reference — clean up
-    shared.clientProcess = null;
-    client = null;
-    cmdChar = null;
-  }
-  const { port, serverAddress } = req.body;
+  const { clientId, port, serverAddress } = req.body;
 
-  if (!port || !serverAddress) {
-    return res.status(400).send("Missing port or server IP address in request");
+  if (!clientId || !port || !serverAddress) {
+    return res.status(400).send("Missing clientId, port or server IP address in request");
   }
 
-  // spawn process in client mode
-  // TCPChatServer.exe 0 <port> <ip>
-  client = spawn(serverPath, ["1", String(port), serverAddress]);
-  shared.clientProcess = client;
-  console.log(`[CLIENT PID] ${client.pid}`);
+  if (clients.has(clientId)) {
+    return res.status(400).send("Client already running");
+  }
+
+  const proc = spawn(serverPath, ["1", String(port), serverAddress]);
+  const entry = { process: proc, cmdChar: null };
+  clients.set(clientId, entry);
+  shared.clientProcesses.add(proc);
+  console.log(`[CLIENT ${clientId} PID] ${proc.pid}`);
 
   let responded = false;
 
@@ -41,64 +51,50 @@ router.post("/start", (req, res) => {
       console.error(`${message}:`, error);
       res.status(500).send(`${message}: ${error}`);
       responded = true;
-
-      // cleanup client if error happens at startup
-      if (client) {
-        client.kill();
-        shared.clientProcess = null;
-        client = null;
-        cmdChar = null;
-      }
+      cleanupClient(clientId);
     }
   };
 
-  // error checks
-  client.on("error", (error) => errorHandler(error, "Failed to start client"));
+  proc.on("error", (error) => errorHandler(error, "Failed to start client"));
 
-  client.stderr.once("data", (data) =>
+  proc.stderr.once("data", (data) =>
     errorHandler(data.toString(), "Client Error")
   );
 
-  // output stream — buffer data and look for welcome message to extract cmdChar
   let stdoutBuffer = "";
-  client.stdout.on("data", (data) => {
+  proc.stdout.on("data", (data) => {
     const text = data.toString().replace(/\0/g, "");
-    console.log(`[CLIENT stdout] ${text.trim()}`);
+    console.log(`[CLIENT ${clientId} stdout] ${text.trim()}`);
     stdoutBuffer += text;
     const welcomeMatch = stdoutBuffer.match(/begin them with: (.)/);
     if (welcomeMatch && !responded) {
-      cmdChar = welcomeMatch[1];
-      console.log(`Command char: ${cmdChar}`);
-      res.status(200).send(`Client connected. Command character: ${cmdChar}`);
+      entry.cmdChar = welcomeMatch[1];
+      console.log(`Client ${clientId} command char: ${entry.cmdChar}`);
+      res.status(200).send(`Client connected. Command character: ${entry.cmdChar}`);
       responded = true;
     }
   });
 
-  // clean up reference when process exits
-  client.once("exit", (code) => {
-    shared.clientProcess = null;
-    client = null;
-    cmdChar = null;
+  proc.once("exit", (code) => {
+    cleanupClient(clientId);
     if (!responded) {
       responded = true;
-      console.error(`Client process exited unexpectedly with code ${code}`);
+      console.error(`Client ${clientId} process exited unexpectedly with code ${code}`);
       res.status(500).send(`Client process exited unexpectedly with code ${code}`);
     }
   });
 });
 
 router.post("/command", (req, res) => {
-  if (!client) {
-    return res.status(400).send("Client not running");
-  }
+  const { clientId, command } = req.body;
 
-  let { command } = req.body;
-  console.log("COMMAND received:", command);
-  if (!command) {
-    return res.status(400).send("Missing command in request");
-  }
-  command += "\n";
+  if (!clientId) return res.status(400).send("Missing clientId in request");
+  const entry = clients.get(clientId);
+  if (!entry) return res.status(400).send("Client not running");
 
+  if (!command) return res.status(400).send("Missing command in request");
+
+  const fullCommand = command + "\n";
   let responded = false;
 
   const errorHandler = (message) => {
@@ -109,24 +105,21 @@ router.post("/command", (req, res) => {
     }
   };
 
-  // handler for stderr output
   const cmdErrorHandler = (data) => {
     const msg = data.toString();
     if (msg.startsWith("[CLIENT]")) {
       console.log("CLIENT DEBUG:", msg);
-      return; // debug logs are not errors
+      return;
     }
     errorHandler(msg);
   };
-  client.stderr.on("data", cmdErrorHandler);
+  entry.process.stderr.on("data", cmdErrorHandler);
 
-  // clean up listener when request completes
-  const cleanup = () => client.stderr.off("data", cmdErrorHandler);
+  const cleanup = () => entry.process.stderr.off("data", cmdErrorHandler);
   res.on("close", cleanup);
 
   try {
-    // input command
-    client.stdin.write(command, (error) => {
+    entry.process.stdin.write(fullCommand, (error) => {
       if (error) {
         errorHandler(`Failed to write to stdin: ${error.message}`);
       } else if (!responded) {
@@ -141,15 +134,14 @@ router.post("/command", (req, res) => {
 });
 
 router.get("/output", (req, res) => {
-  if (!client) {
-    return res.status(400).send("Client not running");
-  }
+  const { clientId } = req.query;
 
-  // capture local reference so event callbacks aren't affected
-  // if the module-level client variable is mutated later
-  const currentClient = client;
+  if (!clientId) return res.status(400).send("Missing clientId query parameter");
+  const entry = clients.get(clientId);
+  if (!entry) return res.status(400).send("Client not running");
 
-  // treat response as server-side event (SSE) stream
+  const currentEntry = entry;
+
   res.set({
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
@@ -157,52 +149,49 @@ router.get("/output", (req, res) => {
   });
   res.flushHeaders();
 
-  // handler to send messages from output stream to frontend
   const outputHandler = (data) => {
     const output = data.toString().replace(/\0/g, "").trim();
     const formatted = output.replace(/\r?\n/g, "\n");
     const lines = formatted.split("\n");
-    console.log(`Response: ${output}`);
+    console.log(`Response [${clientId}]: ${output}`);
     for (const line of lines) {
       res.write(`data: ${line}\n`);
     }
     res.write("\n");
   };
 
-  // call handler on data recieved
-  currentClient.stdout.on("data", outputHandler);
+  currentEntry.process.stdout.on("data", outputHandler);
 
   let closed = false;
 
-  // cleanup when client disconnects or request closes
   req.on("close", () => {
     if (!closed) {
       closed = true;
-      console.log("Client disconnected from SSE stream");
-      currentClient.stdout.off("data", outputHandler);
+      console.log(`Client ${clientId} disconnected from SSE stream`);
+      currentEntry.process.stdout.off("data", outputHandler);
       res.end();
     }
   });
 
-  // cleanup if client process exits
-  currentClient.once("exit", (code) => {
+  currentEntry.process.once("exit", (code) => {
     if (!closed) {
       closed = true;
-      console.log(`Process exited with code ${code}. Closing SSE stream`);
-      currentClient.stdout.off("data", outputHandler);
+      console.log(`Client ${clientId} process exited with code ${code}. Closing SSE stream`);
+      currentEntry.process.stdout.off("data", outputHandler);
       res.end();
     }
   });
 });
 
 router.post("/stop", (req, res) => {
-  if (!client) {
-    return res.status(400).send("Client not running");
-  }
+  const { clientId } = req.body;
+
+  if (!clientId) return res.status(400).send("Missing clientId in request");
+  const entry = clients.get(clientId);
+  if (!entry) return res.status(400).send("Client not running");
 
   let responded = false;
 
-  // error handler
   const errorHandler = (message) => {
     if (!responded) {
       console.error(`Client Error: ${message}:`);
@@ -210,21 +199,18 @@ router.post("/stop", (req, res) => {
       responded = true;
     }
   };
-  client.stderr.once("data", (data) => errorHandler(data.toString()));
+  entry.process.stderr.once("data", (data) => errorHandler(data.toString()));
 
-  // handler for output from stop operation
   const stopOutputHandler = (data) => {
     if (!responded) {
-      console.log(`Client: ${data.toString().replace(/\0/g, "").trim()}`);
-      client.stdout.off("data", stopOutputHandler);
+      console.log(`Client ${clientId}: ${data.toString().replace(/\0/g, "").trim()}`);
+      entry.process.stdout.off("data", stopOutputHandler);
 
       setTimeout(() => {
-        if (client) {
-          console.log(`[CLIENT PID] killing ${client.pid}`);
-          client.kill();
-          shared.clientProcess = null;
-          client = null;
-          cmdChar = null;
+        if (clients.has(clientId)) {
+          console.log(`[CLIENT ${clientId} PID] killing ${entry.process.pid}`);
+          entry.process.kill();
+          cleanupClient(clientId);
           res.status(200).send("Client disconnected");
           responded = true;
         } else if (!responded) {
@@ -234,37 +220,30 @@ router.post("/stop", (req, res) => {
       }, 100);
     }
   };
-  client.stdout.once("data", stopOutputHandler);
+  entry.process.stdout.once("data", stopOutputHandler);
 
-  // cleanup if client process exits
-  client.once("exit", (code) => {
+  entry.process.once("exit", (code) => {
     if (!responded) {
-      console.log(`Process exited with code ${code}`);
-      shared.clientProcess = null;
-      client = null;
-      cmdChar = null;
+      console.log(`Client ${clientId} process exited with code ${code}`);
+      cleanupClient(clientId);
       res.status(200).send("Client disconnected");
       responded = true;
     }
   });
 
-  // try to disconnect client (thru cmd or forced)
   try {
-    if (cmdChar) {
-      // input command to disconnect
-      client.stdin.write(`${cmdChar}disconnect\n`, (error) => {
+    if (entry.cmdChar) {
+      entry.process.stdin.write(`${entry.cmdChar}disconnect\n`, (error) => {
         if (error && !responded) {
           errorHandler(`Failed to write disconnect command: ${error.message}`);
         }
       });
     } else {
       if (!responded) {
-        client.kill();
-        shared.clientProcess = null;
-        client = null;
-        cmdChar = null;
+        entry.process.kill();
+        cleanupClient(clientId);
         res.status(200).send("Client disconnected");
-        console.warn("Null cmdChar. Client force killed");
+        console.warn(`Null cmdChar for client ${clientId}. Force killed`);
         responded = true;
       }
     }
