@@ -7,7 +7,7 @@ It enables fast, real time communication between authenticated users while track
 
 ## Demo
 
-[👉 **Click here to see live demo**](https://linettekuhn.github.io/tcp-chat/)
+[👉 **Click here to see live demo**](https://chat.linettekuhn.com)
 
 ---
 
