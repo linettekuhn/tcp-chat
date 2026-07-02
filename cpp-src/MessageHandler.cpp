@@ -36,6 +36,7 @@ bool MessageHandler::ValidateInputCommand()
 	// check parameter count
 	if (_tokens.size() > 3) return false;
 	if (commandName == "help" || commandName == "logout" || commandName == "getlist" ||
+		commandName == "getregistered" ||
 		commandName == "getchatlog" || commandName == "getcmdlog" || commandName == "shutdown" || commandName == "disconnect")
 	{
 		if (_tokens.size() != 1) return false; // command + no params
@@ -75,6 +76,7 @@ std::vector<std::string> MessageHandler::GetCommandParameters()
 	
 	// no parameter 
 	if (_commandName == "help" || _commandName == "logout" || _commandName == "getlist" ||
+		_commandName == "getregistered" ||
 		_commandName == "getchatlog" || _commandName == "getcmdlog" || _tokens.size() > 3)
 	{
 		return params;

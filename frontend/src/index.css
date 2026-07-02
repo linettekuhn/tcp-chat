@@ -1,21 +1,5 @@
 /* Fonts */
-@import url("https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,100..900;1,100..900&family=Chivo:ital,wght@0,100..900;1,100..900&display=swap");
-
-h1,
-h2,
-h3,
-h4 {
-  font-family: "Bitter";
-}
-
-p,
-button,
-a,
-input,
-li,
-select {
-  font-family: "Chivo";
-}
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap");
 
 /* Box sizing rules */
 *,
@@ -61,33 +45,23 @@ body {
   width: 100vw;
   height: 100vh;
   display: flex;
-  flex-direction: column-reverse;
-  background-color: rgb(76, 89, 88);
+  flex-direction: column;
 }
 
 main {
-  height: 90vh;
-  background-color: rgb(191, 191, 191);
-  border-radius: var(--space-2xl) var(--space-2xl) 0 0;
   display: flex;
+  flex: 1;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: var(--space-l);
-  padding: var(--space-l);
-  padding-bottom: var(--space-xl);
 }
 
 #root {
   flex: 1;
   width: 100%;
   margin: 0;
-  display: inherit;
-  flex-direction: inherit;
-  place-content: inherit;
-  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   color: inherit;
-  background-color: inherit;
 }
 
 /* Class to bold and italicize text */
@@ -225,6 +199,31 @@ textarea:not([rows]) {
   /* Custom pairs */
   /* Space s-l: 16px → 40px */
   --space-s-l: clamp(1rem, 0.7857rem + 1.0714vw, 2.5rem);
+
+  --color-background: light-dark(
+    var(--mantine-color-dark-1),
+    var(--mantine-color-dark-8)
+  );
+  --color-tab-bar-background: light-dark(
+    var(--mantine-color-gray-2),
+    var(--mantine-color-gray-8)
+  );
+  --color-top-bar-background: light-dark(
+    var(--mantine-color-gray-1),
+    var(--mantine-color-gray-9)
+  );
+  --color-drawer-background: light-dark(
+    var(--mantine-color-gray-1),
+    var(--mantine-color-gray-9)
+  );
+  --color-text: light-dark(
+    var(--mantine-color-black),
+    var(--mantine-color-white)
+  );
+  --color-alert: light-dark(
+    var(--mantine-color-red-6),
+    var(--mantine-color-red-4)
+  );
 }
 
 /* Font sizes */
@@ -264,10 +263,5 @@ h1 {
 @media (min-width: 700px) {
   h1 {
     flex-direction: row;
-  }
-
-  main {
-    padding-bottom: 0;
-    padding: var(--space-m) var(--space-3xl);
   }
 }

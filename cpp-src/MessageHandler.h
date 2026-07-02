@@ -17,6 +17,7 @@ private:
 											"send", 
 											"logout", 
 											"getlist", 
+											"getregistered",
 											"getchatlog", 
 											"getcmdlog",
 											"shutdown",

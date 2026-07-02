@@ -1,4 +1,6 @@
 #include "ClientHandler.h"
+#include <sys/select.h>
+#include <sys/time.h>
 
 int ClientHandler::init(uint16_t port, std::string address)
 {
@@ -98,6 +100,38 @@ std::string ClientHandler::handleServer()
     {
         return std::string(buffer, buffer + length);
     }
+}
+
+std::string ClientHandler::handleServerAll()
+{
+    char buffer[256];
+    int length = 0;
+    int result = readMessage(_clientSocket, buffer, sizeof(buffer), length);
+    if (result != SUCCESS)
+    {
+        return "ERROR";
+    }
+    std::string response(buffer, buffer + length);
+
+    fd_set readSet;
+    struct timeval timeout;
+
+    while (true)
+    {
+        FD_ZERO(&readSet);
+        FD_SET(_clientSocket, &readSet);
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 10000;
+
+        int selResult = select(_clientSocket + 1, &readSet, nullptr, nullptr, &timeout);
+        if (selResult <= 0) break;
+
+        result = readMessage(_clientSocket, buffer, sizeof(buffer), length);
+        if (result != SUCCESS) break;
+        response.append(buffer, length);
+    }
+
+    return response;
 }
 
 void ClientHandler::stop()

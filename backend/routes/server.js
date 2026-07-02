@@ -4,11 +4,45 @@ const { spawn } = require("child_process");
 const path = require("path");
 const serverPath = path.join(__dirname, "../bin/TCPChatServer");
 const os = require("os");
+const shared = require("../shared-state");
 
 let cmdChar = null;
 let admin = null;
+let serverProcess = null;
 
-router.post("/start", (req, res) => {
+const killServerProcess = () => {
+  if (serverProcess) {
+    serverProcess.kill("SIGTERM");
+    serverProcess = null;
+  }
+};
+
+const waitAndKillServer = () => {
+  if (!serverProcess) return Promise.resolve();
+  return new Promise((resolve) => {
+    const p = serverProcess;
+    serverProcess = null;
+    p.once("exit", () => resolve());
+    p.kill("SIGTERM");
+  });
+};
+
+const killAdmin = () => {
+  if (admin) {
+    admin.kill();
+    admin = null;
+    cmdChar = null;
+  }
+};
+
+process.on("SIGTERM", () => { killServerProcess(); killAdmin(); });
+process.on("SIGINT", () => { killServerProcess(); killAdmin(); });
+
+router.post("/start", async (req, res) => {
+  // kill any orphaned processes from a previous session
+  killAdmin();
+  await waitAndKillServer();
+
   const { port, capacity, commandChar } = req.body;
   cmdChar = commandChar;
 
@@ -27,57 +61,138 @@ router.post("/start", (req, res) => {
     String(commandChar),
   ]);
 
+  serverProcess = server;
+  console.log(`[SERVER PID] ${server.pid}`);
+
+  let responded = false;
+
   // error checks
   server.on("error", (error) => {
-    console.error("Failed to start server:", error);
-    return res.status(500).send("Failed to start server");
+    if (!responded) {
+      responded = true;
+      console.error("Failed to start server:", error);
+      res.status(500).send("Failed to start server");
+    }
   });
 
   server.stderr.once("data", (data) => {
-    console.error(`Server Error: ${data}`);
-    return res.status(500).send(`Server Error: ${data}`);
+    if (!responded) {
+      responded = true;
+      console.error(`Server Error: ${data}`);
+      res.status(500).send(`Server Error: ${data}`);
+    }
   });
 
-  // output stream
+  // log all server stdout
+  server.stdout.on("data", (data) => {
+    console.log(`[SERVER stdout] ${data.toString().replace(/\0/g, "").trim()}`);
+  });
+
+  // output stream (first data = startup response)
   server.stdout.once("data", (data) => {
-    console.log(`Server: ${data}`);
-    res.status(200).send(`Server: ${data}`);
+    if (!responded) {
+      responded = true;
+      console.log(`Server: ${data}`);
+      res.status(200).send(`Server: ${data}`);
+    }
+  });
+
+  // handle process exiting without producing output (e.g. init failure)
+  server.once("exit", (code) => {
+    if (serverProcess === server) serverProcess = null;
+    if (!responded) {
+      responded = true;
+      console.error(`Server process exited unexpectedly with code ${code}`);
+      res
+        .status(500)
+        .send(`Server process exited unexpectedly with code ${code}`);
+    }
   });
 });
 
 router.post("/stop", (req, res) => {
   const { port, serverAddress } = req.body;
   if (!port || !serverAddress) {
-    res.status(400).send("Missing port or server IP address in request.");
+    return res
+      .status(400)
+      .send("Missing port or server IP address in request.");
   }
-  const shutdownCmd = `${cmdChar}shutdown\n`;
-  const disconnectCmd = `${cmdChar}disconnect\n`;
 
-  // spawn temp client to send shutdown command
+  let responded = false;
+
+  const finish = () => {
+    if (!responded) {
+      responded = true;
+      cmdChar = null;
+      serverProcess = null;
+      for (const proc of shared.clientProcesses) {
+        proc.kill("SIGTERM");
+      }
+      shared.clientProcesses.clear();
+      res.status(200).send("Server was shutdown");
+    }
+  };
+
+  // primary path: send shutdown through the already connected admin client
+  if (admin && cmdChar) {
+    admin.stdin.write(`${cmdChar}shutdown\n`);
+
+    let pending = 0;
+    const tryFinish = () => {
+      if (--pending <= 0) {
+        admin = null;
+        serverProcess = null;
+        finish();
+      }
+    };
+
+    pending++;
+    admin.once("exit", () => {
+      admin = null;
+      tryFinish();
+    });
+
+    if (serverProcess) {
+      pending++;
+      serverProcess.once("exit", () => {
+        serverProcess = null;
+        tryFinish();
+      });
+    }
+
+    // safety timeout: force-kill both if they don't exit
+    setTimeout(() => {
+      if (admin) admin.kill();
+      if (serverProcess) serverProcess.kill();
+      admin = null;
+      serverProcess = null;
+      finish();
+    }, 5000);
+
+    return;
+  }
+
+  // fallback path: spawn a temporary client
   const client = spawn(serverPath, ["1", String(port), serverAddress]);
+  client.stdin.write(`${cmdChar || ""}shutdown\n`);
 
-  // input commands to shutdown server and disconnect temp client
-  client.stdin.write(shutdownCmd);
-  client.stdin.write(disconnectCmd);
-
-  // error checks
   client.on("error", (error) => {
-    console.error("Failed to start client:", error);
-    return res.status(500).send("Failed to start client");
+    if (!responded) {
+      responded = true;
+      cmdChar = null;
+      res.status(500).send("Failed to start client: " + error.message);
+    }
   });
 
-  client.stderr.once("data", (data) => {
-    console.error(`Client Error: ${data}`);
-    return res.status(500).send(`Client Error: ${data}`);
+  client.on("exit", () => {
+    finish();
   });
 
-  // output stream
-  client.stdout.once("data", (data) => {
-    console.log(`Client: ${data}`);
+  // safety timeout: force-kill temp client if it doesn't exit
+  setTimeout(() => {
     client.kill();
-    cmdChar = null;
-    return res.status(200).send(`Server was shutdown`);
-  });
+    finish();
+  }, 3000);
 });
 
 router.get("/host-ip", (req, res) => {
@@ -86,14 +201,14 @@ router.get("/host-ip", (req, res) => {
 
   // loop thru network interfaces
   for (const name in interfaces) {
-    for (const interface of interfaces[name]) {
+    for (const netInterface of interfaces[name]) {
       // find first non-internal ipv4 ip address
       if (
-        interface.family === "IPv4" &&
-        interface.address !== "127.0.0.1" &&
-        !interface.internal
+        netInterface.family === "IPv4" &&
+        netInterface.address !== "127.0.0.1" &&
+        !netInterface.internal
       ) {
-        address = interface.address;
+        address = netInterface.address;
         break;
       }
     }
@@ -103,7 +218,12 @@ router.get("/host-ip", (req, res) => {
 
 router.post("/start-admin", (req, res) => {
   if (admin) {
-    return res.status(400).send("Admin client already running");
+    if (admin.exitCode === null && admin.signalCode === null) {
+      return res.status(400).send("Admin client already running");
+    }
+    // orphaned reference — clean up
+    admin = null;
+    cmdChar = null;
   }
   const { port, serverAddress } = req.body;
 
@@ -114,6 +234,7 @@ router.post("/start-admin", (req, res) => {
   // spawn process in client mode
   // TCPChatServer.exe 0 <port> <ip>
   admin = spawn(serverPath, ["1", String(port), serverAddress]);
+  console.log(`[ADMIN PID] ${admin.pid}`);
 
   let responded = false;
 
@@ -136,15 +257,18 @@ router.post("/start-admin", (req, res) => {
   admin.on("error", (error) => errorHandler(error, "Failed to start admin"));
 
   admin.stderr.once("data", (data) =>
-    errorHandler(data.toString(), "Admin client Error")
+    errorHandler(data.toString(), "Admin client Error"),
   );
 
-  // output stream
-  admin.stdout.once("data", (data) => {
-    if (!responded) {
-      const output = data.toString().replace(/\0/g, "").trim();
-      cmdChar = output.charAt(output.length - 1);
-
+  // output stream — buffer data and look for welcome message to extract cmdChar
+  let stdoutBuffer = "";
+  admin.stdout.on("data", (data) => {
+    const text = data.toString().replace(/\0/g, "");
+    console.log(`[ADMIN stdout] ${text.trim()}`);
+    stdoutBuffer += text;
+    const welcomeMatch = stdoutBuffer.match(/begin them with: (.)/);
+    if (welcomeMatch && !responded) {
+      cmdChar = welcomeMatch[1];
       console.log(`Command char: ${cmdChar}`);
       res
         .status(200)
@@ -158,7 +282,7 @@ router.post("/start-admin", (req, res) => {
     if (!responded && code !== 0) {
       errorHandler(
         `Process exited with code ${code}`,
-        "Admin client process exited unexpectedly"
+        "Admin client process exited unexpectedly",
       );
     }
   });
@@ -185,22 +309,38 @@ router.post("/command-admin", (req, res) => {
     }
   };
 
-  // temp handler for command errors
+  // handler for stderr output
   const cmdErrorHandler = (data) => {
-    errorHandler(data.toString());
-    // remove handler after error
-    admin.stderr.off("data", cmdErrorHandler);
+    const msg = data.toString();
+    if (msg.startsWith("[CLIENT]")) {
+      console.log("CLIENT DEBUG:", msg);
+      return; // debug logs are not errors
+    }
+    errorHandler(msg);
   };
-  admin.stderr.once("data", cmdErrorHandler);
+  admin.stderr.on("data", cmdErrorHandler);
+
+  // clean up listener when request completes
+  const cleanup = () => admin.stderr.off("data", cmdErrorHandler);
+  res.on("close", cleanup);
 
   try {
     // input command
     admin.stdin.write(command, (error) => {
       if (error) {
-        errorHandler(`Failed to write to stdin: ${error.message}`);
+        // "stream was destroyed" is expected during restart — not an error
+        if (error.message.includes("stream was destroyed")) {
+          if (!responded) {
+            responded = true;
+            res.status(200).send("Command sent");
+          }
+        } else {
+          errorHandler(`Failed to write to stdin: ${error.message}`);
+        }
       } else if (!responded) {
         res.status(200).send("Command sent");
       }
+      cleanup();
     });
   } catch (error) {
     errorHandler(`Error caught writing to stdin stream: ${error.message}`);
@@ -211,6 +351,10 @@ router.get("/output-admin", (req, res) => {
   if (!admin) {
     return res.status(400).send("Admin client not running");
   }
+
+  // capture local reference so event callbacks aren't affected
+  // if the module-level admin variable is mutated later
+  const currentAdmin = admin;
 
   // treat response as server-side event (SSE) stream
   res.set({
@@ -233,7 +377,7 @@ router.get("/output-admin", (req, res) => {
   };
 
   // call handler on data recieved
-  admin.stdout.on("data", outputHandler);
+  currentAdmin.stdout.on("data", outputHandler);
 
   let closed = false;
 
@@ -242,17 +386,17 @@ router.get("/output-admin", (req, res) => {
     if (!closed) {
       closed = true;
       console.log("Admin client disconnected from SSE stream");
-      admin.stdout.off("data", outputHandler);
+      currentAdmin.stdout.off("data", outputHandler);
       res.end();
     }
   });
 
   // cleanup if admin process exits
-  admin.once("exit", (code) => {
+  currentAdmin.once("exit", (code) => {
     if (!closed) {
       closed = true;
       console.log(`Process exited with code ${code}. Closing SSE stream`);
-      admin.stdout.off("data", outputHandler);
+      currentAdmin.stdout.off("data", outputHandler);
       res.end();
     }
   });

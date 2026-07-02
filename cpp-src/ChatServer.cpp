@@ -13,6 +13,10 @@ int ChatServer::init(uint16_t port, char commandChar, int capacity)
         return SETUP_ERROR;
     }
 
+    // allow immediate rebinding to port in TIME_WAIT after restart
+    int optval = 1;
+    setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+
     // create socket address
     sockaddr_in serverAddress;
     serverAddress.sin_family = AF_INET;
@@ -26,7 +30,7 @@ int ChatServer::init(uint16_t port, char commandChar, int capacity)
     }
 
     // listen for incoming requests
-    if (listen(serverSocket, 1) == SOCKET_ERROR)
+    if (listen(serverSocket, SOMAXCONN) == SOCKET_ERROR)
     {
         return SETUP_ERROR;
     }
@@ -127,14 +131,14 @@ bool ChatServer::handleClients()
         std::string commandName = msgHandler.GetCommandName();
         if (commandName == "help") {
             response = "(SERVER) Available commands:\n" +
-                std::string(1, _commandChar) + "help: list all cmds\n" +
+                std::string(1, _commandChar) + "help: list cmds\n" +
                 std::string(1, _commandChar) + "register <user> <pass>: create account\n" +
                 std::string(1, _commandChar) + "login <user> <pass>: log in\n" +
                 std::string(1, _commandChar) + "logout*: log out\n" +
                 std::string(1, _commandChar) + "send* [<user>] \"msg\": send msg\n" +
                 std::string(1, _commandChar) + "getlist*: online users\n" +
                 std::string(1, _commandChar) + "getchatlog*: chat history\n" +
-                std::string(1, _commandChar) + "getcmdlog*: command history ";
+                std::string(1, _commandChar) + "getcmdlog*: cmd history";
             sendMessage(s, response.c_str(), static_cast<int32_t>(response.size() + 1));
         }
         else if (commandName == "shutdown")
@@ -237,35 +241,59 @@ bool ChatServer::handleClients()
                         std::string username = iter->first;
                         SOCKET socket = iter->second;
 
-                        if (FD_ISSET(socket, &_writeSet))
-                        {
-                            sendMessage(socket, formattedMessage.c_str(), static_cast<int32_t>(formattedMessage.size() + 1));
-                        }
+                        sendMessage(socket, formattedMessage.c_str(), static_cast<int32_t>(formattedMessage.size() + 1));
                     }
                 }
             }
-            else if (commandName == "logout" || commandName == "disconnect") {
+            else if (commandName == "logout") {
                 _loggedIn.erase(_socketToUsername[s]);
                 _socketToUsername.erase(s);
                 std::string response = "(SERVER) User logged out!";
                 sendMessage(s, response.c_str(), static_cast<int32_t>(response.size() + 1));
-                
+            }
+            else if (commandName == "disconnect") {
+                _loggedIn.erase(_socketToUsername[s]);
+                _socketToUsername.erase(s);
+                std::string response = "(SERVER) User logged out!";
+                sendMessage(s, response.c_str(), static_cast<int32_t>(response.size() + 1));
+
                 shutdown(s, SD_BOTH);
                 close(s);
                 FD_CLR(s, &_masterSet);
                 FD_CLR(s, &_readSet);
                 FD_CLR(s, &_writeSet);
+                toRemove.push_back(s);
             }
             else if (commandName == "getlist") {
-                std::string response = "(SERVER) Logged in users:\n";
-                for (auto iter = _loggedIn.begin(); iter != _loggedIn.end(); ++iter)
-                {
-                    std::string username = iter->first;
-                    response += username + '\n';
-                }
-                if (response.empty())
+                std::string response;
+                if (_loggedIn.empty())
                 {
                     response = "(SERVER) No users logged in";
+                }
+                else
+                {
+                    response = "(SERVER) Logged in users:\n";
+                    for (auto iter = _loggedIn.begin(); iter != _loggedIn.end(); ++iter)
+                    {
+                        std::string username = iter->first;
+                        response += username + '\n';
+                    }
+                }
+                sendMessage(s, response.c_str(), static_cast<int32_t>(response.size() + 1));
+            }
+            else if (commandName == "getregistered") {
+                std::string response;
+                if (_registered.empty())
+                {
+                    response = "(SERVER) No users registered";
+                }
+                else
+                {
+                    response = "(SERVER) Registered users:\n";
+                    for (const auto& pair : _registered)
+                    {
+                        response += pair.first + '\n';
+                    }
                 }
                 sendMessage(s, response.c_str(), static_cast<int32_t>(response.size() + 1));
             }
@@ -369,7 +397,7 @@ int ChatServer::sendMessage(SOCKET socket, const char* data, int32_t length)
 int ChatServer::selectReadySockets()
 {
     _readSet = _masterSet;
-    _writeSet = _masterSet;
+    FD_ZERO(&_writeSet);
 
     timeval timeout;
     timeout.tv_sec = 0;
@@ -382,7 +410,7 @@ int ChatServer::selectReadySockets()
 			highest_fd = s;
         }
     }
-    int result = select(highest_fd + 1, &_readSet, &_writeSet, NULL, &timeout);
+    int result = select(highest_fd + 1, &_readSet, NULL, NULL, &timeout);
     if (result < 0)
     {
         return SELECT_ERROR;

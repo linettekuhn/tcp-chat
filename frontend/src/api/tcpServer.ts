@@ -1,3 +1,5 @@
+import { BASEURL } from "./config";
+
 async function handleResponse(res: Response) {
   if (!res.ok) {
     const errorBody = await res.text();
@@ -20,7 +22,7 @@ export async function startServer(
   commandChar: string
 ) {
   await handleResponse(
-    await fetch("https://api.tcp-chat.linettekuhn.com/server/start", {
+    await fetch(`${BASEURL}/server/start`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -32,7 +34,7 @@ export async function startServer(
 
 export async function stopServer(port: number, serverAddress: string) {
   await handleResponse(
-    await fetch("https://api.tcp-chat.linettekuhn.com/server/stop", {
+    await fetch(`${BASEURL}/server/stop`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -44,20 +46,20 @@ export async function stopServer(port: number, serverAddress: string) {
 
 export async function getHostIP() {
   const response = await handleResponse(
-    await fetch("https://api.tcp-chat.linettekuhn.com/server/host-ip", {
+    await fetch(`${BASEURL}/server/host-ip`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
       },
     })
   );
-  const ip = response.text();
+  const ip = await response.text();
   return ip;
 }
 
 export async function startAdminClient(port: number, serverAddress: string) {
   const response = await handleResponse(
-    await fetch("https://api.tcp-chat.linettekuhn.com/server/start-admin", {
+    await fetch(`${BASEURL}/server/start-admin`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -71,7 +73,7 @@ export async function startAdminClient(port: number, serverAddress: string) {
 
 export async function sendAdminCommand(command: string) {
   const response = await handleResponse(
-    await fetch("https://api.tcp-chat.linettekuhn.com/server/command-admin", {
+    await fetch(`${BASEURL}/server/command-admin`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -83,13 +85,3 @@ export async function sendAdminCommand(command: string) {
   return msg;
 }
 
-export async function stopAdminClient() {
-  await handleResponse(
-    await fetch("https://api.tcp-chat.linettekuhn.com/server/stop-admin", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-  );
-}

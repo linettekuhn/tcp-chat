@@ -23,6 +23,7 @@ public:
     int readMessage(SOCKET socket, char* buffer, int32_t size, int& lengthRead);
     int sendMessage(SOCKET socket, const char* data, int32_t length);
     std::string handleServer();
+    std::string handleServerAll();
     void stop();
     SOCKET* getSocket() { return &_clientSocket; }
     char getCommandChar() { return _commandChar; }

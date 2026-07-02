@@ -1,3 +1,5 @@
+import { BASEURL } from "./config";
+
 async function handleResponse(res: Response) {
   if (!res.ok) {
     const errorBody = await res.text();
@@ -14,41 +16,51 @@ async function handleResponse(res: Response) {
   return res;
 }
 
-export async function startClient(port: number, serverAddress: string) {
+export async function startClient(port: number, serverAddress: string, clientId: string) {
   const response = await handleResponse(
-    await fetch("https://api.tcp-chat.linettekuhn.com/client/start", {
+    await fetch(`${BASEURL}/client/start`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ port, serverAddress }),
+      body: JSON.stringify({ port, serverAddress, clientId }),
     })
   );
   const msg = await response.text();
   return msg;
 }
 
-export async function sendCommand(command: string) {
-  const response = await handleResponse(
-    await fetch("https://api.tcp-chat.linettekuhn.com/client/command", {
+export async function sendCommand(command: string, clientId: string) {
+  const url = `${BASEURL}/client/command`;
+  console.log("FETCHING:", url, command);
+  let response: Response;
+  try {
+    response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ command }),
-    })
-  );
-  const msg = await response.text();
+      body: JSON.stringify({ command, clientId }),
+    });
+  } catch (err) {
+    console.error("FETCH failed:", err);
+    throw err;
+  }
+  console.log("RESPONSE status:", response.status);
+  const handled = await handleResponse(response);
+  const msg = await handled.text();
+  console.log("RESPONSE body:", msg);
   return msg;
 }
 
-export async function stopClient() {
+export async function stopClient(clientId: string) {
   await handleResponse(
-    await fetch("https://api.tcp-chat.linettekuhn.com/client/stop", {
+    await fetch(`${BASEURL}/client/stop`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
+      body: JSON.stringify({ clientId }),
     })
   );
 }
